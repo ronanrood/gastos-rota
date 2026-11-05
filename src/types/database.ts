@@ -1,0 +1,77 @@
+export type UserRole = 'admin' | 'driver';
+export type UserStatus = 'active' | 'inactive';
+
+export interface Profile {
+  id: string;
+  nome: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  created_at?: string;
+}
+
+export interface Vehicle {
+  id: string;
+  user_id: string;
+  marca: string;
+  modelo: string;
+  ano: number;
+  km_atual: number;
+  media_gasolina: number | null;
+  media_etanol: number | null;
+  media_gnv: number | null;
+  created_at?: string;
+}
+
+export interface DailyEarning {
+  id: string;
+  user_id: string;
+  data: string;
+  qtd_pecas: number;
+  valor_unitario_peca: number;
+  valor_extra_bonus: number;
+  faturamento_bruto: number;
+  km_rodado: number;
+  observacoes: string | null;
+  created_at?: string;
+}
+
+export interface DailyEarningInsert {
+  user_id: string;
+  data: string;
+  qtd_pecas: number;
+  valor_unitario_peca: number;
+  valor_extra_bonus: number;
+  km_rodado: number;
+  observacoes?: string | null;
+  // NOTE: faturamento_bruto is GENERATED ALWAYS in PostgreSQL. Never send it on insert!
+}
+
+export type FuelType = 'gasolina' | 'etanol' | 'gnv';
+
+export interface FuelLog {
+  id: string;
+  user_id: string;
+  data: string;
+  tipo_combustivel: FuelType;
+  valor_total_abastecido: number;
+  preco_por_litro_ou_m3: number;
+  litros_calculados: number;
+  km_odometro: number;
+  created_at?: string;
+}
+
+export interface MaintenanceLog {
+  id: string;
+  user_id: string;
+  data: string;
+  oficina_nome: string;
+  descricao_servico: string;
+  valor_pecas: number;
+  valor_mao_de_obra: number;
+  valor_total: number;
+  garantia_ate: string | null;
+  comprovante_url: string | null;
+  created_at?: string;
+}
+
