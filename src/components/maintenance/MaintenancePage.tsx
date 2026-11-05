@@ -19,7 +19,9 @@ import {
   Building,
   Paperclip,
   X,
+  Pencil,
 } from 'lucide-react';
+import { EditMaintenanceModal } from './EditMaintenanceModal';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -59,6 +61,15 @@ export const MaintenancePage: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingMaintenanceLog, setEditingMaintenanceLog] = useState<MaintenanceLog | null>(null);
+
+  const handleEditSuccess = (updated: MaintenanceLog) => {
+    setMaintenanceLogs((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    setFormSuccess('Manutenção atualizada com sucesso!');
+    setTimeout(() => {
+      setFormSuccess(null);
+    }, 4000);
+  };
 
   // Cálculo em tempo real do Valor Total (Peças + Mão de Obra)
   const numValorPecas = parseFloat(valorPecas) || 0;
@@ -762,6 +773,20 @@ export const MaintenancePage: React.FC = () => {
                       </a>
                     )}
 
+                    {/* Botão Editar */}
+                    {!isConfirming && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingMaintenanceLog(item)}
+                        aria-label="Editar manutenção"
+                        title="Editar esta manutenção"
+                        className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        <span className="hidden sm:inline">Editar</span>
+                      </button>
+                    )}
+
                     {/* Excluir */}
                     {isConfirming ? (
                       <div className="flex items-center gap-1 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
@@ -790,7 +815,7 @@ export const MaintenancePage: React.FC = () => {
                         onClick={() => setConfirmDeleteId(item.id)}
                         aria-label="Excluir manutenção"
                         title="Excluir este registro"
-                        className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
+                        className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -817,6 +842,18 @@ export const MaintenancePage: React.FC = () => {
           })}
         </div>
       </section>
+
+      {/* Modal Responsivo de Edição de Manutenção / Orçamento */}
+      {editingMaintenanceLog && user && (
+        <EditMaintenanceModal
+          key={editingMaintenanceLog.id}
+          isOpen={!!editingMaintenanceLog}
+          maintenanceLog={editingMaintenanceLog}
+          userId={user.id}
+          onClose={() => setEditingMaintenanceLog(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </div>
   );
 };

@@ -17,8 +17,14 @@ import {
   FileText,
   Sparkles,
   Info,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  Pencil,
 } from 'lucide-react';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
+import { EditEarningModal } from './EditEarningModal';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -53,6 +59,36 @@ export const DailyEarningsPage: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingEarning, setEditingEarning] = useState<DailyEarning | null>(null);
+
+  const handleEditSuccess = (updated: DailyEarning) => {
+    setEarningsList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    setFormSuccess('Lançamento atualizado com sucesso!');
+    setTimeout(() => {
+      setFormSuccess(null);
+    }, 4000);
+  };
+
+  // Controle de recolhimento da seção Últimos Lançamentos (com persistência local)
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('gastos_rota_earnings_history_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleHistoryCollapsed = () => {
+    setIsHistoryCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('gastos_rota_earnings_history_collapsed', String(next));
+      } catch {
+        // ignora se localStorage não disponível
+      }
+      return next;
+    });
+  };
 
   // Visor em tempo real do Total Bruto Estimado
   const numPecas = parseFloat(qtdPecas) || 0;
@@ -198,11 +234,18 @@ export const DailyEarningsPage: React.FC = () => {
 
       setFormSuccess('Lançamento registrado com sucesso!');
 
-      // Atualiza a lista local com o registro retornado do banco
+      // Atualiza a lista local com o registro retornado do banco e desrecolhe para visualização
       if (inserted) {
         setEarningsList((prev) => [inserted as DailyEarning, ...prev]);
+        setIsHistoryCollapsed(false);
+        try {
+          localStorage.setItem('gastos_rota_earnings_history_collapsed', 'false');
+        } catch {
+          // ignora se localStorage não disponível
+        }
       } else {
         await refreshEarnings();
+        setIsHistoryCollapsed(false);
       }
 
       // Limpa os campos para o próximo lançamento mantendo a data e opcionalmente o valor da peça
@@ -553,156 +596,251 @@ export const DailyEarningsPage: React.FC = () => {
         </form>
       </section>
 
-      {/* LISTAGEM: ÚLTIMOS LANÇAMENTOS DO MOTORISTA */}
+      {/* LISTAGEM: ÚLTIMOS LANÇAMENTOS DO MOTORISTA (RECOLHÍVEL) */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-              Últimos Lançamentos
-            </h3>
-            <p className="text-xs text-slate-400">
-              Histórico diário de produção e ganhos
-            </p>
-          </div>
-
+        <div className="flex items-center justify-between px-1 gap-2">
           <button
             type="button"
-            onClick={refreshEarnings}
-            disabled={loadingList}
-            title="Atualizar lista"
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            onClick={toggleHistoryCollapsed}
+            className="flex items-center gap-2.5 text-left group cursor-pointer py-1 -my-1 rounded-xl focus:outline-none"
+            aria-expanded={!isHistoryCollapsed}
+            aria-label={isHistoryCollapsed ? 'Expandir últimos lançamentos' : 'Recolher últimos lançamentos'}
           >
-            <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight group-hover:text-emerald-400 transition-colors">
+                  Últimos Lançamentos
+                </h3>
+                {earningsList.length > 0 && (
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
+                    {earningsList.length}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors">
+                {isHistoryCollapsed
+                  ? 'Lançamentos recolhidos • Toque para visualizar'
+                  : 'Histórico diário de produção e ganhos'}
+              </p>
+            </div>
           </button>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {!isHistoryCollapsed && (
+              <button
+                type="button"
+                onClick={refreshEarnings}
+                disabled={loadingList}
+                title="Atualizar lista"
+                aria-label="Atualizar lista de lançamentos"
+                className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition cursor-pointer"
+              >
+                <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={toggleHistoryCollapsed}
+              title={isHistoryCollapsed ? 'Expandir lançamentos' : 'Ocultar lançamentos'}
+              aria-label={isHistoryCollapsed ? 'Mostrar últimos lançamentos' : 'Ocultar últimos lançamentos'}
+              className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/70 active:scale-[0.97] transition cursor-pointer select-none"
+            >
+              {isHistoryCollapsed ? (
+                <>
+                  <Eye className="w-4 h-4 text-emerald-400" />
+                  <span className="hidden sm:inline">Mostrar</span>
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                </>
+              ) : (
+                <>
+                  <EyeOff className="w-4 h-4 text-slate-400" />
+                  <span className="hidden sm:inline">Ocultar</span>
+                  <ChevronUp className="w-4 h-4 text-slate-400" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Loading Skeleton */}
-        {loadingList && earningsList.length === 0 && (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-24 bg-slate-900/60 rounded-2xl border border-slate-800 animate-pulse"
-              />
-            ))}
-          </div>
+        {/* Card quando recolhido */}
+        {isHistoryCollapsed && (
+          <button
+            type="button"
+            onClick={toggleHistoryCollapsed}
+            className="w-full py-3.5 px-4 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl text-xs text-slate-400 hover:text-slate-200 transition cursor-pointer flex items-center justify-between group active:scale-[0.99]"
+          >
+            <span className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-emerald-400" />
+              <span>
+                {earningsList.length > 0
+                  ? `${earningsList.length} lançamento${earningsList.length > 1 ? 's' : ''} oculto${earningsList.length > 1 ? 's' : ''}`
+                  : 'Nenhum lançamento exibido'}
+              </span>
+            </span>
+            <span className="text-emerald-400 font-semibold group-hover:underline flex items-center gap-1">
+              Toque para exibir
+              <ChevronDown className="w-3.5 h-3.5" />
+            </span>
+          </button>
         )}
 
-        {/* Empty State */}
-        {!loadingList && earningsList.length === 0 && (
-          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
-              <Info className="w-6 h-6" />
-            </div>
-            <h4 className="text-sm font-bold text-white">Nenhum lançamento encontrado</h4>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              Use o formulário acima para registrar sua primeira rota. Os valores calculados aparecerão aqui em ordem cronológica.
-            </p>
-          </div>
-        )}
+        {/* Conteúdo exibido apenas quando NÃO recolhido */}
+        {!isHistoryCollapsed && (
+          <>
+            {/* Loading Skeleton */}
+            {loadingList && earningsList.length === 0 && (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-24 bg-slate-900/60 rounded-2xl border border-slate-800 animate-pulse"
+                  />
+                ))}
+              </div>
+            )}
 
-        {/* Lista de Registros */}
-        <div className="space-y-3">
-          {earningsList.map((item) => {
-            const faturamento =
-              typeof item.faturamento_bruto === 'number'
-                ? item.faturamento_bruto
-                : item.qtd_pecas * item.valor_unitario_peca + item.valor_extra_bonus;
+            {/* Empty State */}
+            {!loadingList && earningsList.length === 0 && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                  <Info className="w-6 h-6" />
+                </div>
+                <h4 className="text-sm font-bold text-white">Nenhum lançamento encontrado</h4>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  Use o formulário acima para registrar sua primeira rota. Os valores calculados aparecerão aqui em ordem cronológica.
+                </p>
+              </div>
+            )}
 
-            const rendimentoKm = item.km_rodado > 0 ? faturamento / item.km_rodado : 0;
-            const isConfirming = confirmDeleteId === item.id;
-            const isDeleting = deletingId === item.id;
+            {/* Lista de Registros */}
+            <div className="space-y-3">
+              {earningsList.map((item) => {
+                const faturamento =
+                  typeof item.faturamento_bruto === 'number'
+                    ? item.faturamento_bruto
+                    : item.qtd_pecas * item.valor_unitario_peca + item.valor_extra_bonus;
 
-            return (
-              <div
-                key={item.id}
-                className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  {/* Informações da Data e Faturamento */}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
-                        {formatDate(item.data)}
+                const rendimentoKm = item.km_rodado > 0 ? faturamento / item.km_rodado : 0;
+                const isConfirming = confirmDeleteId === item.id;
+                const isDeleting = deletingId === item.id;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Informações da Data e Faturamento */}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
+                            {formatDate(item.data)}
+                          </span>
+                          {item.valor_extra_bonus > 0 && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                              + Bônus {formatCurrency(item.valor_extra_bonus)}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1.5">
+                          {formatCurrency(faturamento)}
+                        </div>
+                      </div>
+
+                      {/* Ações: Editar e Excluir */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {!isConfirming && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingEarning(item)}
+                            aria-label="Editar lançamento"
+                            title="Editar este lançamento"
+                            className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
+                          >
+                            <Pencil className="w-4 h-4" />
+                            <span className="hidden sm:inline">Editar</span>
+                          </button>
+                        )}
+
+                        {isConfirming ? (
+                          <div className="flex items-center gap-1.5 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
+                            <span className="text-[11px] font-semibold text-rose-300 px-1">
+                              Excluir?
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item.id)}
+                              disabled={isDeleting}
+                              className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                            >
+                              {isDeleting ? '...' : 'Sim'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
+                            >
+                              Não
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(item.id)}
+                            aria-label="Excluir lançamento"
+                            title="Excluir este lançamento"
+                            className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detalhes operacionais em Badges */}
+                    <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                      <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+                        <strong className="text-white">{item.qtd_pecas}</strong> peças
                       </span>
-                      {item.valor_extra_bonus > 0 && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                          + Bônus {formatCurrency(item.valor_extra_bonus)}
+                      <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+                        {formatCurrency(item.valor_unitario_peca)} / un.
+                      </span>
+                      <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+                        <strong className="text-white">{item.km_rodado}</strong> km
+                      </span>
+                      {rendimentoKm > 0 && (
+                        <span className="bg-emerald-500/10 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-mono font-semibold">
+                          {formatCurrency(rendimentoKm)}/km
                         </span>
                       )}
                     </div>
 
-                    <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1.5">
-                      {formatCurrency(faturamento)}
-                    </div>
-                  </div>
-
-                  {/* Ações / Botão de Excluir */}
-                  <div>
-                    {isConfirming ? (
-                      <div className="flex items-center gap-1.5 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
-                        <span className="text-[11px] font-semibold text-rose-300 px-1">
-                          Excluir?
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={isDeleting}
-                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
-                        >
-                          {isDeleting ? '...' : 'Sim'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
-                        >
-                          Não
-                        </button>
+                    {/* Observações, se houver */}
+                    {item.observacoes && (
+                      <div className="mt-2 text-xs text-slate-400 italic bg-slate-950/40 p-2 rounded-lg border border-slate-800/40">
+                        &quot;{item.observacoes}&quot;
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(item.id)}
-                        aria-label="Excluir lançamento"
-                        title="Excluir este lançamento"
-                        className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     )}
                   </div>
-                </div>
-
-                {/* Detalhes operacionais em Badges */}
-                <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                  <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                    <strong className="text-white">{item.qtd_pecas}</strong> peças
-                  </span>
-                  <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                    {formatCurrency(item.valor_unitario_peca)} / un.
-                  </span>
-                  <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                    <strong className="text-white">{item.km_rodado}</strong> km
-                  </span>
-                  {rendimentoKm > 0 && (
-                    <span className="bg-emerald-500/10 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-mono font-semibold">
-                      {formatCurrency(rendimentoKm)}/km
-                    </span>
-                  )}
-                </div>
-
-                {/* Observações, se houver */}
-                {item.observacoes && (
-                  <div className="mt-2 text-xs text-slate-400 italic bg-slate-950/40 p-2 rounded-lg border border-slate-800/40">
-                    &quot;{item.observacoes}&quot;
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </section>
+
+      {/* Modal Responsivo de Edição de Lançamento */}
+      {editingEarning && (
+        <EditEarningModal
+          key={editingEarning.id}
+          isOpen={!!editingEarning}
+          earning={editingEarning}
+          onClose={() => setEditingEarning(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </div>
   );
 };

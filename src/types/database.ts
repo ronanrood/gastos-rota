@@ -88,6 +88,16 @@ export interface DailyEarningInsert {
   // NOTE: faturamento_bruto is GENERATED ALWAYS in PostgreSQL. Never send it on insert!
 }
 
+export interface DailyEarningUpdate {
+  data?: string;
+  qtd_pecas?: number;
+  valor_unitario_peca?: number;
+  valor_extra_bonus?: number;
+  km_rodado?: number;
+  observacoes?: string | null;
+  // NOTE: faturamento_bruto is GENERATED ALWAYS in PostgreSQL. NEVER send it on update!
+}
+
 export type FuelType = 'gasolina' | 'etanol' | 'gnv';
 
 export interface FuelLog {
@@ -110,6 +120,15 @@ export interface FuelLogInsert {
   preco_por_litro_ou_m3: number;
   km_odometro: number;
   // NOTE: litros_calculados is GENERATED ALWAYS in PostgreSQL. Do NOT send it!
+}
+
+export interface FuelLogUpdate {
+  data?: string;
+  tipo_combustivel?: FuelType;
+  valor_total_abastecido?: number;
+  preco_por_litro_ou_m3?: number;
+  km_odometro?: number;
+  // NOTE: litros_calculados is GENERATED ALWAYS in PostgreSQL. NEVER send it on update!
 }
 
 export interface MaintenanceLog {
@@ -136,4 +155,15 @@ export interface MaintenanceLogInsert {
   garantia_ate?: string | null;
   comprovante_url?: string | null;
   // NOTE: valor_total is GENERATED ALWAYS in PostgreSQL. Do NOT send it!
+}
+
+export interface MaintenanceLogUpdate {
+  data?: string;
+  oficina_nome?: string;
+  descricao_servico?: string;
+  valor_pecas?: number;
+  valor_mao_de_obra?: number;
+  garantia_ate?: string | null;
+  comprovante_url?: string | null;
+  // NOTE: valor_total is GENERATED ALWAYS in PostgreSQL. NEVER send it on update!
 }

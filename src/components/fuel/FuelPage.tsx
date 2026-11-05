@@ -17,7 +17,9 @@ import {
   Filter,
   Car,
   Info,
+  Pencil,
 } from 'lucide-react';
+import { EditFuelModal } from './EditFuelModal';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -53,6 +55,15 @@ export const FuelPage: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingFuelLog, setEditingFuelLog] = useState<FuelLog | null>(null);
+
+  const handleEditSuccess = (updated: FuelLog) => {
+    setFuelLogs((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    setFormSuccess('Abastecimento atualizado com sucesso!');
+    setTimeout(() => {
+      setFormSuccess(null);
+    }, 4000);
+  };
 
   // Cálculos em tempo real
   const numValorTotal = parseFloat(valorTotalAbastecido) || 0;
@@ -717,8 +728,21 @@ export const FuelPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Ações / Excluir */}
-                  <div>
+                  {/* Ações: Editar e Excluir */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {!isConfirming && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingFuelLog(item)}
+                        aria-label="Editar abastecimento"
+                        title="Editar este abastecimento"
+                        className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 active:bg-amber-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        <span className="hidden sm:inline">Editar</span>
+                      </button>
+                    )}
+
                     {isConfirming ? (
                       <div className="flex items-center gap-1.5 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
                         <span className="text-[11px] font-semibold text-rose-300 px-1">
@@ -746,7 +770,7 @@ export const FuelPage: React.FC = () => {
                         onClick={() => setConfirmDeleteId(item.id)}
                         aria-label="Excluir abastecimento"
                         title="Excluir este abastecimento"
-                        className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
+                        className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -771,6 +795,18 @@ export const FuelPage: React.FC = () => {
           })}
         </div>
       </section>
+
+      {/* Modal Responsivo de Edição de Abastecimento */}
+      {editingFuelLog && (
+        <EditFuelModal
+          key={editingFuelLog.id}
+          isOpen={!!editingFuelLog}
+          fuelLog={editingFuelLog}
+          vehicle={vehicle}
+          onClose={() => setEditingFuelLog(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </div>
   );
 };
