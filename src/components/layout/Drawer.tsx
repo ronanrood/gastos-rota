@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { PaymentConfigModal } from '../payment/PaymentConfigModal';
+import { InstallPwaBanner } from '../pwa/InstallPwaBanner';
 
 export type ViewType =
   | 'earnings'
@@ -194,6 +195,9 @@ export const Drawer: React.FC<DrawerProps> = ({
             </span>
           </button>
         </div>
+
+        {/* Botão de Instalar Aplicativo no Celular (PWA) */}
+        <InstallPwaBanner inDrawer onActionComplete={onClose} />
 
         {/* Navigation list */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">

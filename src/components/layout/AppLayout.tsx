@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Header } from './Header';
 import { Drawer, type ViewType } from './Drawer';
 import { BottomNav } from './BottomNav';
+import { InstallPwaBanner } from '../pwa/InstallPwaBanner';
 
 interface AppLayoutProps {
   currentView: ViewType;
@@ -43,6 +44,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
       {/* Conteúdo Principal: Com compensação superior para o Header e inferior para a BottomNav */}
       <main className="flex-1 pt-18 sm:pt-20 pb-24 md:pb-12 px-3 sm:px-6 max-w-6xl w-full mx-auto overflow-x-hidden">
+        {/* Banner discreto de instalação PWA (oculta automaticamente se standalone) */}
+        <InstallPwaBanner />
         {children}
       </main>
 

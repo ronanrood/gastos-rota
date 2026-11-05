@@ -1,0 +1,26 @@
+{
+  "name": "Gastos Rota - Controle para Motoristas",
+  "short_name": "Gastos Rota",
+  "description": "Controle de ganhos, quinzenas, combustível e manutenção para motoristas.",
+  "lang": "pt-BR",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09090b",
+  "theme_color": "#10b981",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "48x48 72x72 96x96 144x144",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
