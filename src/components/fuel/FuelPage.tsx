@@ -473,7 +473,7 @@ export const FuelPage: React.FC = () => {
                   key={opt.id}
                   type="button"
                   onClick={() => setTipoCombustivel(opt.id)}
-                  className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[48px] py-2.5 px-3 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
                     tipoCombustivel === opt.id
                       ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 ring-2 ring-amber-400'
                       : 'bg-slate-950/80 text-slate-400 hover:text-white border border-slate-700/80'
@@ -486,7 +486,7 @@ export const FuelPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
             {/* Data */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
@@ -501,7 +501,7 @@ export const FuelPage: React.FC = () => {
                   required
                   value={data}
                   onChange={(e) => setData(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
                 />
               </div>
             </div>
@@ -517,13 +517,14 @@ export const FuelPage: React.FC = () => {
                 </div>
                 <input
                   type="number"
+                  inputMode="decimal"
                   required
                   min="0"
                   step="0.1"
                   value={kmOdometro}
                   onChange={(e) => setKmOdometro(e.target.value)}
                   placeholder="Ex: 85400"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
                 />
               </div>
             </div>
@@ -539,13 +540,14 @@ export const FuelPage: React.FC = () => {
                 </div>
                 <input
                   type="number"
+                  inputMode="decimal"
                   required
                   min="0"
                   step="0.01"
                   value={valorTotalAbastecido}
                   onChange={(e) => setValorTotalAbastecido(e.target.value)}
                   placeholder="Ex: 150.00"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
                 />
               </div>
             </div>
@@ -561,13 +563,14 @@ export const FuelPage: React.FC = () => {
                 </div>
                 <input
                   type="number"
+                  inputMode="decimal"
                   required
                   min="0"
                   step="0.001"
                   value={precoPorLitro}
                   onChange={(e) => setPrecoPorLitro(e.target.value)}
                   placeholder="Ex: 5.89"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
                 />
               </div>
             </div>
@@ -578,7 +581,7 @@ export const FuelPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full h-12 min-h-[48px] px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-amber-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -725,14 +728,14 @@ export const FuelPage: React.FC = () => {
                           type="button"
                           onClick={() => handleDelete(item.id)}
                           disabled={isDeleting}
-                          className="px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer"
+                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
                         >
                           {isDeleting ? '...' : 'Sim'}
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
-                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer"
+                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
                         >
                           Não
                         </button>
@@ -743,7 +746,7 @@ export const FuelPage: React.FC = () => {
                         onClick={() => setConfirmDeleteId(item.id)}
                         aria-label="Excluir abastecimento"
                         title="Excluir este abastecimento"
-                        className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 transition cursor-pointer"
+                        className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

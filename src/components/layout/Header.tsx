@@ -13,14 +13,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenDrawer, currentTitle }) =>
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white shadow-md">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Left: Hamburger & Brand */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={onOpenDrawer}
             aria-label="Abrir menu de navegação"
-            className="p-2 -ml-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition cursor-pointer"
+            className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center -ml-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700 active:scale-[0.95] transition cursor-pointer"
           >
             <Menu className="w-6 h-6" />
           </button>

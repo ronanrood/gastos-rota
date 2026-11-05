@@ -339,7 +339,7 @@ export const AdminPage: React.FC = () => {
               setModalError(null);
               setModalSuccess(null);
             }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-emerald-500/25 transition cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-4 h-12 min-h-[48px] rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition active:scale-[0.98] cursor-pointer"
           >
             <UserPlus className="w-4 h-4 stroke-[2.5]" />
             Cadastrar Novo Motorista
@@ -350,7 +350,7 @@ export const AdminPage: React.FC = () => {
             onClick={() => loadAdminData(true)}
             disabled={loading}
             title="Atualizar lista"
-            className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="w-12 h-12 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition active:scale-[0.96] cursor-pointer"
           >
             <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -447,7 +447,7 @@ export const AdminPage: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nome ou e-mail..."
-              className="w-full pl-9 pr-3.5 py-2 bg-slate-950/80 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-9 pr-3.5 py-3 sm:py-2 bg-slate-950/80 border border-slate-700 rounded-xl text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -460,113 +460,204 @@ export const AdminPage: React.FC = () => {
               : 'Nenhum usuário cadastrado na tabela profiles.'}
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-2 sm:mx-0">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
-                  <th className="py-3 px-3">Motorista</th>
-                  <th className="py-3 px-3">E-mail</th>
-                  <th className="py-3 px-3 text-center">Função</th>
-                  <th className="py-3 px-3 text-center">Status</th>
-                  <th className="py-3 px-3 text-right">Cadastrado em</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filteredProfiles.map((p) => {
-                  const isCurrentUser = p.id === user?.id;
-                  const isUpdating = updatingId === p.id;
+          <>
+            {/* VISÃO MOBILE: CARDS VERTICAIS EMPILHADOS (block md:hidden) */}
+            <div className="block md:hidden space-y-3">
+              {filteredProfiles.map((p) => {
+                const isCurrentUser = p.id === user?.id;
+                const isUpdating = updatingId === p.id;
 
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-950/40 transition">
-                      {/* Nome */}
-                      <td className="py-3.5 px-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs shrink-0">
-                            {p.nome ? p.nome.charAt(0).toUpperCase() : 'M'}
-                          </div>
-                          <div>
-                            <span className="font-bold text-white block">
+                return (
+                  <div
+                    key={p.id}
+                    className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-sm shrink-0">
+                          {p.nome ? p.nome.charAt(0).toUpperCase() : 'M'}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-white text-sm truncate">
                               {p.nome || 'Sem nome'}
                             </span>
                             {isCurrentUser && (
-                              <span className="text-[10px] text-emerald-400 font-semibold">
-                                (Você)
+                              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-md">
+                                Você
                               </span>
                             )}
                           </div>
+                          <span className="text-xs text-slate-400 font-mono block truncate mt-0.5">
+                            {p.email}
+                          </span>
                         </div>
-                      </td>
-
-                      {/* E-mail */}
-                      <td className="py-3.5 px-3 text-slate-300 font-mono text-[11px]">
-                        {p.email}
-                      </td>
-
-                      {/* Role Toggle */}
-                      <td className="py-3.5 px-3 text-center">
-                        <button
-                          type="button"
-                          disabled={isUpdating || isCurrentUser}
-                          onClick={() => handleToggleRole(p)}
-                          title={
-                            isCurrentUser
-                              ? 'Você não pode alterar sua própria função'
-                              : 'Clique para alternar entre Motorista e Administrador'
-                          }
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                            p.role === 'admin'
-                              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
-                              : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700'
-                          }`}
-                        >
-                          {p.role === 'admin' ? (
-                            <>
-                              <ShieldCheck className="w-3 h-3 text-amber-400" />
-                              Admin
-                            </>
-                          ) : (
-                            'Motorista'
-                          )}
-                        </button>
-                      </td>
-
-                      {/* Status Toggle */}
-                      <td className="py-3.5 px-3 text-center">
-                        <button
-                          type="button"
-                          disabled={isUpdating}
-                          onClick={() => handleToggleStatus(p)}
-                          title="Clique para alternar entre Ativo e Inativo"
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider transition cursor-pointer disabled:opacity-50 ${
-                            p.status === 'active'
-                              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
-                              : 'bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25'
-                          }`}
-                        >
-                          {p.status === 'active' ? (
-                            <>
-                              <UserCheck className="w-3 h-3 text-emerald-400" />
-                              Ativo
-                            </>
-                          ) : (
-                            <>
-                              <UserX className="w-3 h-3 text-rose-400" />
-                              Inativo
-                            </>
-                          )}
-                        </button>
-                      </td>
-
-                      {/* Data */}
-                      <td className="py-3.5 px-3 text-right text-slate-400 font-mono text-[11px]">
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-mono shrink-0">
                         {formatDate(p.created_at)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
+                      {/* Toggle Função */}
+                      <button
+                        type="button"
+                        disabled={isUpdating || isCurrentUser}
+                        onClick={() => handleToggleRole(p)}
+                        className={`h-11 min-h-[44px] rounded-xl font-bold text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                          p.role === 'admin'
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            : 'bg-slate-800 text-slate-300 border border-slate-700'
+                        }`}
+                      >
+                        {p.role === 'admin' ? (
+                          <>
+                            <ShieldCheck className="w-4 h-4 text-amber-400" />
+                            Admin
+                          </>
+                        ) : (
+                          'Motorista'
+                        )}
+                      </button>
+
+                      {/* Toggle Status */}
+                      <button
+                        type="button"
+                        disabled={isUpdating}
+                        onClick={() => handleToggleStatus(p)}
+                        className={`h-11 min-h-[44px] rounded-xl font-bold text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer disabled:opacity-50 ${
+                          p.status === 'active'
+                            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                            : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                        }`}
+                      >
+                        {p.status === 'active' ? (
+                          <>
+                            <UserCheck className="w-4 h-4 text-emerald-400" />
+                            Ativo
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="w-4 h-4 text-rose-400" />
+                            Inativo
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* VISÃO TABLET E DESKTOP: TABELA TRADICIONAL (hidden md:block) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+                    <th className="py-3 px-3">Motorista</th>
+                    <th className="py-3 px-3">E-mail</th>
+                    <th className="py-3 px-3 text-center">Função</th>
+                    <th className="py-3 px-3 text-center">Status</th>
+                    <th className="py-3 px-3 text-right">Cadastrado em</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {filteredProfiles.map((p) => {
+                    const isCurrentUser = p.id === user?.id;
+                    const isUpdating = updatingId === p.id;
+
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-950/40 transition">
+                        {/* Nome */}
+                        <td className="py-3.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs shrink-0">
+                              {p.nome ? p.nome.charAt(0).toUpperCase() : 'M'}
+                            </div>
+                            <div>
+                              <span className="font-bold text-white block">
+                                {p.nome || 'Sem nome'}
+                              </span>
+                              {isCurrentUser && (
+                                <span className="text-[10px] text-emerald-400 font-semibold">
+                                  (Você)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* E-mail */}
+                        <td className="py-3.5 px-3 text-slate-300 font-mono text-[11px]">
+                          {p.email}
+                        </td>
+
+                        {/* Role Toggle */}
+                        <td className="py-3.5 px-3 text-center">
+                          <button
+                            type="button"
+                            disabled={isUpdating || isCurrentUser}
+                            onClick={() => handleToggleRole(p)}
+                            title={
+                              isCurrentUser
+                                ? 'Você não pode alterar sua própria função'
+                                : 'Clique para alternar entre Motorista e Administrador'
+                            }
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                              p.role === 'admin'
+                                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+                                : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700'
+                            }`}
+                          >
+                            {p.role === 'admin' ? (
+                              <>
+                                <ShieldCheck className="w-3 h-3 text-amber-400" />
+                                Admin
+                              </>
+                            ) : (
+                              'Motorista'
+                            )}
+                          </button>
+                        </td>
+
+                        {/* Status Toggle */}
+                        <td className="py-3.5 px-3 text-center">
+                          <button
+                            type="button"
+                            disabled={isUpdating}
+                            onClick={() => handleToggleStatus(p)}
+                            title="Clique para alternar entre Ativo e Inativo"
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider transition cursor-pointer disabled:opacity-50 ${
+                              p.status === 'active'
+                                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
+                                : 'bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25'
+                            }`}
+                          >
+                            {p.status === 'active' ? (
+                              <>
+                                <UserCheck className="w-3 h-3 text-emerald-400" />
+                                Ativo
+                              </>
+                            ) : (
+                              <>
+                                <UserX className="w-3 h-3 text-rose-400" />
+                                Inativo
+                              </>
+                            )}
+                          </button>
+                        </td>
+
+                        {/* Data */}
+                        <td className="py-3.5 px-3 text-right text-slate-400 font-mono text-[11px]">
+                          {formatDate(p.created_at)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
 
@@ -615,7 +706,7 @@ export const AdminPage: React.FC = () => {
                   Nome Completo
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <User className="w-4 h-4" />
                   </div>
                   <input
@@ -624,7 +715,7 @@ export const AdminPage: React.FC = () => {
                     value={modalNome}
                     onChange={(e) => setModalNome(e.target.value)}
                     placeholder="Ex: Pedro Henrique Silva"
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-base sm:text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -634,7 +725,7 @@ export const AdminPage: React.FC = () => {
                   E-mail de Acesso
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Mail className="w-4 h-4" />
                   </div>
                   <input
@@ -643,7 +734,7 @@ export const AdminPage: React.FC = () => {
                     value={modalEmail}
                     onChange={(e) => setModalEmail(e.target.value)}
                     placeholder="motorista@email.com"
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-base sm:text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -653,7 +744,7 @@ export const AdminPage: React.FC = () => {
                   Senha Provisória
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
@@ -663,7 +754,7 @@ export const AdminPage: React.FC = () => {
                     value={modalPassword}
                     onChange={(e) => setModalPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-base sm:text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -676,14 +767,14 @@ export const AdminPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="w-1/2 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 text-xs font-semibold transition cursor-pointer"
+                  className="w-1/2 h-12 min-h-[48px] rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 text-sm sm:text-xs font-semibold transition active:scale-[0.98] cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={modalLoading}
-                  className="w-1/2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 text-xs font-bold shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  className="w-1/2 h-12 min-h-[48px] rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 text-sm sm:text-xs font-bold shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-[0.98] cursor-pointer"
                 >
                   {modalLoading ? (
                     <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />

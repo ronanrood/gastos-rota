@@ -18,6 +18,7 @@ import {
   Sparkles,
   Info,
 } from 'lucide-react';
+import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -314,6 +315,12 @@ export const DailyEarningsPage: React.FC = () => {
         </div>
       )}
 
+      {/* CARDS DE RECEBIMENTOS (FECHAMENTO DE QUINZENA/MÊS) */}
+      <PaymentCyclesCards
+        earnings={earningsList}
+        title="Meus Recebimentos (Fechamento de Quinzena)"
+      />
+
       {/* CARD PRINCIPAL: ENCARTE DE LANÇAMENTO DIÁRIO */}
       <section className="bg-slate-900 border border-slate-800/90 rounded-3xl shadow-2xl p-5 sm:p-7 relative overflow-hidden backdrop-blur-md">
         {/* Decorative corner glow */}
@@ -392,7 +399,7 @@ export const DailyEarningsPage: React.FC = () => {
 
         {/* FORMULÁRIO DE LANÇAMENTO */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
             {/* Campo: Data */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
@@ -407,7 +414,7 @@ export const DailyEarningsPage: React.FC = () => {
                   required
                   value={data}
                   onChange={(e) => setData(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                 />
               </div>
             </div>
@@ -423,13 +430,14 @@ export const DailyEarningsPage: React.FC = () => {
                 </div>
                 <input
                   type="number"
+                  inputMode="numeric"
                   required
                   min="0"
                   step="1"
                   value={qtdPecas}
                   onChange={(e) => setQtdPecas(e.target.value)}
                   placeholder="Ex: 50"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
                 />
               </div>
             </div>
@@ -445,13 +453,14 @@ export const DailyEarningsPage: React.FC = () => {
                 </div>
                 <input
                   type="number"
+                  inputMode="decimal"
                   required
                   min="0"
                   step="0.01"
                   value={valorUnitarioPeca}
                   onChange={(e) => setValorUnitarioPeca(e.target.value)}
                   placeholder="Ex: 3.50"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
                 />
               </div>
             </div>
@@ -467,12 +476,13 @@ export const DailyEarningsPage: React.FC = () => {
                 </div>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={valorExtraBonus}
                   onChange={(e) => setValorExtraBonus(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
                 />
               </div>
             </div>
@@ -488,19 +498,20 @@ export const DailyEarningsPage: React.FC = () => {
                 </div>
                 <input
                   type="number"
+                  inputMode="decimal"
                   required
                   min="0"
                   step="0.1"
                   value={kmRodado}
                   onChange={(e) => setKmRodado(e.target.value)}
                   placeholder="Ex: 85.5"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
                 />
               </div>
             </div>
 
             {/* Campo: Observações */}
-            <div>
+            <div className="sm:col-span-2 lg:col-span-1">
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Observações (Opcional)
               </label>
@@ -512,8 +523,8 @@ export const DailyEarningsPage: React.FC = () => {
                   type="text"
                   value={observacoes}
                   onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Ex: Rota centro / chuva forte"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  placeholder="Ex: Rota centro / chuva"
+                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                 />
               </div>
             </div>
@@ -524,7 +535,7 @@ export const DailyEarningsPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full h-12 min-h-[48px] px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -637,14 +648,14 @@ export const DailyEarningsPage: React.FC = () => {
                           type="button"
                           onClick={() => handleDelete(item.id)}
                           disabled={isDeleting}
-                          className="px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer"
+                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
                         >
                           {isDeleting ? '...' : 'Sim'}
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(null)}
-                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer"
+                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
                         >
                           Não
                         </button>
@@ -655,7 +666,7 @@ export const DailyEarningsPage: React.FC = () => {
                         onClick={() => setConfirmDeleteId(item.id)}
                         aria-label="Excluir lançamento"
                         title="Excluir este lançamento"
-                        className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 transition cursor-pointer"
+                        className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

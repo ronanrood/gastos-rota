@@ -1,5 +1,6 @@
 export type UserRole = 'admin' | 'driver';
 export type UserStatus = 'active' | 'inactive';
+export type PaymentCycleType = 'quinzenal' | 'mensal';
 
 export interface Profile {
   id: string;
@@ -7,7 +8,24 @@ export interface Profile {
   email: string;
   role: UserRole;
   status: UserStatus;
+  tipo_recebimento?: PaymentCycleType | null;
+  dia_pagamento_1?: number | null;
+  corte_1_inicio?: number | null;
+  corte_1_fim?: number | null;
+  dia_pagamento_2?: number | null;
+  corte_2_inicio?: number | null;
+  corte_2_fim?: number | null;
   created_at?: string;
+}
+
+export interface ProfilePaymentConfig {
+  tipo_recebimento: PaymentCycleType;
+  dia_pagamento_1: number;
+  corte_1_inicio: number;
+  corte_1_fim: number;
+  dia_pagamento_2?: number | null;
+  corte_2_inicio?: number | null;
+  corte_2_fim?: number | null;
 }
 
 export interface Vehicle {

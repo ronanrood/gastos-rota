@@ -25,6 +25,7 @@ import {
   BarChart3,
   Sparkles,
 } from 'lucide-react';
+import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
 
 type PeriodFilter = 'today' | '7days' | 'month' | 'all';
 
@@ -329,13 +330,13 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Filtro de Período */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto max-w-full">
           {periodButtons.map((btn) => (
             <button
               key={btn.id}
               type="button"
               onClick={() => setPeriod(btn.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+              className={`h-10 min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all active:scale-[0.96] cursor-pointer ${
                 period === btn.id
                   ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -350,9 +351,9 @@ export const DashboardPage: React.FC = () => {
             onClick={() => fetchData(true)}
             disabled={loading}
             title="Atualizar dados"
-            className="p-1.5 ml-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
+            className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition active:scale-[0.95] cursor-pointer"
           >
-            <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
@@ -467,6 +468,12 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {/* CARDS DE FECHAMENTO DE RECEBIMENTOS */}
+      <PaymentCyclesCards
+        earnings={earnings}
+        title="Fechamento de Pagamentos por Ciclo"
+      />
+
       {/* GRÁFICO DE BARRAS RESPONSIVO: FATURAMENTO VS DESPESAS VS LUCRO LÍQUIDO */}
       <section className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl backdrop-blur-md">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-800/80 pb-4 mb-6">
@@ -486,9 +493,9 @@ export const DashboardPage: React.FC = () => {
             Nenhum lançamento no período selecionado para exibição do gráfico.
           </div>
         ) : (
-          <div className="h-72 sm:h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyBarData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <div className="h-[280px] sm:h-80 w-full -ml-2 sm:ml-0">
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={dailyBarData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.4} />
                 <XAxis
                   dataKey="data"
@@ -499,7 +506,7 @@ export const DashboardPage: React.FC = () => {
                 />
                 <YAxis
                   stroke="#94a3b8"
-                  fontSize={11}
+                  fontSize={10}
                   tickLine={false}
                   axisLine={{ stroke: '#334155' }}
                   tickFormatter={(val) => `R$${val}`}
@@ -560,15 +567,15 @@ export const DashboardPage: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
             {/* Gráfico */}
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <Pie
                     data={donutData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
+                    innerRadius={55}
+                    outerRadius={85}
                     paddingAngle={4}
                     dataKey="value"
                   >

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Coins,
   BarChart3,
@@ -11,8 +11,10 @@ import {
   Truck,
   ChevronRight,
   User,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
+import { PaymentConfigModal } from '../payment/PaymentConfigModal';
 
 export type ViewType =
   | 'earnings'
@@ -36,6 +38,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   onSelectView,
 }) => {
   const { profile, signOut } = useAuth();
+  const [isPaymentConfigOpen, setIsPaymentConfigOpen] = useState(false);
   const isAdmin = profile?.role === 'admin';
 
   // Fechar ao pressionar ESC
@@ -120,7 +123,7 @@ export const Drawer: React.FC<DrawerProps> = ({
       {/* Drawer Panel */}
       <aside
         aria-label="Menu principal"
-        className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-slate-900 border-r border-slate-800 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-[85vw] sm:w-80 sm:max-w-xs bg-slate-900 border-r border-slate-800 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -175,6 +178,21 @@ export const Drawer: React.FC<DrawerProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Botão de Atalho para Configurar Pagamento */}
+          <button
+            type="button"
+            onClick={() => setIsPaymentConfigOpen(true)}
+            className="mt-3 w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700 transition cursor-pointer"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <CalendarDays className="w-3.5 h-3.5 text-emerald-400" />
+              Ciclos de Pagamento
+            </span>
+            <span className="text-[10px] text-emerald-400 font-mono font-semibold capitalize">
+              {profile?.tipo_recebimento || 'Quinzenal'}
+            </span>
+          </button>
         </div>
 
         {/* Navigation list */}
@@ -192,7 +210,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                 key={item.id}
                 type="button"
                 onClick={() => handleItemClick(item.id)}
-                className={`w-full text-left flex items-center justify-between p-3 rounded-xl transition-all group cursor-pointer ${
+                className={`w-full min-h-[48px] text-left flex items-center justify-between p-3 rounded-2xl transition-all group cursor-pointer active:scale-[0.98] ${
                   isActive
                     ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/20'
                     : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
@@ -259,6 +277,12 @@ export const Drawer: React.FC<DrawerProps> = ({
           </p>
         </div>
       </aside>
+
+      {/* Modal de Configuração de Recebimento */}
+      <PaymentConfigModal
+        isOpen={isPaymentConfigOpen}
+        onClose={() => setIsPaymentConfigOpen(false)}
+      />
     </>
   );
 };

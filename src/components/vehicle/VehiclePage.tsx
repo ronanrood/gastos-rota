@@ -288,7 +288,7 @@ export const VehiclePage: React.FC = () => {
             onClick={refreshVehicle}
             disabled={loading}
             title="Recarregar dados"
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition active:scale-[0.96] cursor-pointer"
           >
             <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -331,7 +331,7 @@ export const VehiclePage: React.FC = () => {
                   value={marca}
                   onChange={(e) => setMarca(e.target.value)}
                   placeholder="Ex: Fiat, Chevrolet, Renault"
-                  className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                 />
               </div>
 
@@ -345,7 +345,7 @@ export const VehiclePage: React.FC = () => {
                   value={modelo}
                   onChange={(e) => setModelo(e.target.value)}
                   placeholder="Ex: Fiorino, Strada, Kangoo"
-                  className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                 />
               </div>
 
@@ -359,13 +359,14 @@ export const VehiclePage: React.FC = () => {
                   </div>
                   <input
                     type="number"
+                    inputMode="numeric"
                     required
                     min="1970"
                     max={CURRENT_YEAR + 1}
                     value={ano}
                     onChange={(e) => setAno(e.target.value)}
                     placeholder="Ex: 2022"
-                    className="w-full pl-9 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                    className="w-full pl-9 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                   />
                 </div>
               </div>
@@ -388,13 +389,14 @@ export const VehiclePage: React.FC = () => {
                 </div>
                 <input
                   type="number"
+                  inputMode="decimal"
                   required
                   min="0"
                   step="0.1"
                   value={kmAtual}
                   onChange={(e) => setKmAtual(e.target.value)}
                   placeholder="Ex: 85400"
-                  className="w-full pl-10 pr-12 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
+                  className="w-full pl-10 pr-12 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
                 />
                 <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-xs text-slate-400 font-semibold pointer-events-none">
                   KM
@@ -424,12 +426,13 @@ export const VehiclePage: React.FC = () => {
                 <div className="relative">
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     step="0.1"
                     value={mediaGasolina}
                     onChange={(e) => setMediaGasolina(e.target.value)}
                     placeholder="Ex: 11.5"
-                    className="w-full pr-14 pl-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
+                    className="w-full pr-14 pl-3 py-3 sm:py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
                   />
                   <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 pointer-events-none">
                     km/l
@@ -445,12 +448,13 @@ export const VehiclePage: React.FC = () => {
                 <div className="relative">
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     step="0.1"
                     value={mediaEtanol}
                     onChange={(e) => setMediaEtanol(e.target.value)}
                     placeholder="Ex: 8.2"
-                    className="w-full pr-14 pl-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
+                    className="w-full pr-14 pl-3 py-3 sm:py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
                   />
                   <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 pointer-events-none">
                     km/l
@@ -469,12 +473,13 @@ export const VehiclePage: React.FC = () => {
                 <div className="relative">
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     step="0.1"
                     value={mediaGnv}
                     onChange={(e) => setMediaGnv(e.target.value)}
                     placeholder="Ex: 14.0"
-                    className="w-full pr-16 pl-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
+                    className="w-full pr-16 pl-3 py-3 sm:py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
                   />
                   <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 pointer-events-none">
                     km/m³
@@ -497,7 +502,7 @@ export const VehiclePage: React.FC = () => {
             <button
               type="submit"
               disabled={saving}
-              className="w-full py-3.5 px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full h-12 min-h-[48px] px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-base sm:text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
             >
               {saving ? (
                 <>
