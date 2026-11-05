@@ -5,6 +5,9 @@ import { AuthPage } from './components/auth/AuthPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { type ViewType } from './components/layout/Drawer';
 import { DailyEarningsPage } from './components/earnings/DailyEarningsPage';
+import { VehiclePage } from './components/vehicle/VehiclePage';
+import { FuelPage } from './components/fuel/FuelPage';
+import { MaintenancePage } from './components/maintenance/MaintenancePage';
 import { PlaceholderView } from './components/views/PlaceholderView';
 import { Truck } from 'lucide-react';
 
@@ -78,9 +81,11 @@ const MainContent: React.FC = () => {
 
   return (
     <AppLayout currentView={effectiveView} onSelectView={handleSelectView}>
-      {effectiveView === 'earnings' ? (
-        <DailyEarningsPage />
-      ) : (
+      {effectiveView === 'earnings' && <DailyEarningsPage />}
+      {effectiveView === 'vehicle' && <VehiclePage />}
+      {effectiveView === 'fuel' && <FuelPage />}
+      {effectiveView === 'maintenance' && <MaintenancePage />}
+      {(effectiveView === 'dashboard' || effectiveView === 'admin') && (
         <PlaceholderView
           view={effectiveView}
           onGoToEarnings={() => handleSelectView('earnings')}

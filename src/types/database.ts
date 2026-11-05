@@ -23,6 +23,17 @@ export interface Vehicle {
   created_at?: string;
 }
 
+export interface VehicleUpsert {
+  user_id: string;
+  marca: string;
+  modelo: string;
+  ano: number;
+  km_atual: number;
+  media_gasolina: number | null;
+  media_etanol: number | null;
+  media_gnv: number | null;
+}
+
 export interface DailyEarning {
   id: string;
   user_id: string;
@@ -61,6 +72,16 @@ export interface FuelLog {
   created_at?: string;
 }
 
+export interface FuelLogInsert {
+  user_id: string;
+  data: string;
+  tipo_combustivel: FuelType;
+  valor_total_abastecido: number;
+  preco_por_litro_ou_m3: number;
+  km_odometro: number;
+  // NOTE: litros_calculados is GENERATED ALWAYS in PostgreSQL. Do NOT send it!
+}
+
 export interface MaintenanceLog {
   id: string;
   user_id: string;
@@ -75,3 +96,14 @@ export interface MaintenanceLog {
   created_at?: string;
 }
 
+export interface MaintenanceLogInsert {
+  user_id: string;
+  data: string;
+  oficina_nome: string;
+  descricao_servico: string;
+  valor_pecas: number;
+  valor_mao_de_obra: number;
+  garantia_ate?: string | null;
+  comprovante_url?: string | null;
+  // NOTE: valor_total is GENERATED ALWAYS in PostgreSQL. Do NOT send it!
+}
