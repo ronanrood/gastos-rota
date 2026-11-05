@@ -1,0 +1,649 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useAuth } from '../../contexts/useAuth';
+import { supabase } from '../../lib/supabase';
+import type { DailyEarning, FuelLog, MaintenanceLog } from '../../types/database';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Gauge,
+  RotateCw,
+  PieChart as PieIcon,
+  BarChart3,
+  Sparkles,
+} from 'lucide-react';
+
+type PeriodFilter = 'today' | '7days' | 'month' | 'all';
+
+const formatCurrency = (val: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(val || 0);
+};
+
+const formatDateShort = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return dateStr;
+  return `${parts[2]}/${parts[1]}`;
+};
+
+const getDateRange = (period: PeriodFilter): { startDate: string | null; endDate: string | null } => {
+  const now = new Date();
+  const formatYMD = (d: Date) => d.toISOString().split('T')[0];
+
+  if (period === 'today') {
+    const todayStr = formatYMD(now);
+    return { startDate: todayStr, endDate: todayStr };
+  }
+
+  if (period === '7days') {
+    const past = new Date();
+    past.setDate(past.getDate() - 6);
+    return { startDate: formatYMD(past), endDate: formatYMD(now) };
+  }
+
+  if (period === 'month') {
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const firstDay = new Date(y, m, 1);
+    const lastDay = new Date(y, m + 1, 0);
+    return { startDate: formatYMD(firstDay), endDate: formatYMD(lastDay) };
+  }
+
+  return { startDate: null, endDate: null };
+};
+
+export const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
+  const [period, setPeriod] = useState<PeriodFilter>('month');
+  const [loading, setLoading] = useState(true);
+
+  // Dados brutos
+  const [earnings, setEarnings] = useState<DailyEarning[]>([]);
+  const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
+  const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
+
+  // Carregamento dos dados com base no período selecionado
+  const fetchData = useCallback(
+    async (showLoading = false) => {
+      if (!user) return;
+      if (showLoading) setLoading(true);
+
+      const { startDate, endDate } = getDateRange(period);
+
+      try {
+        let eQuery = supabase.from('daily_earnings').select('*').eq('user_id', user.id);
+        let fQuery = supabase.from('fuel_logs').select('*').eq('user_id', user.id);
+        let mQuery = supabase.from('maintenance_logs').select('*').eq('user_id', user.id);
+
+        if (startDate) {
+          eQuery = eQuery.gte('data', startDate);
+          fQuery = fQuery.gte('data', startDate);
+          mQuery = mQuery.gte('data', startDate);
+        }
+        if (endDate) {
+          eQuery = eQuery.lte('data', endDate);
+          fQuery = fQuery.lte('data', endDate);
+          mQuery = mQuery.lte('data', endDate);
+        }
+
+        const [eRes, fRes, mRes] = await Promise.all([
+          eQuery.order('data', { ascending: true }),
+          fQuery.order('data', { ascending: true }),
+          mQuery.order('data', { ascending: true }),
+        ]);
+
+        if (eRes.data) setEarnings(eRes.data as DailyEarning[]);
+        if (fRes.data) setFuelLogs(fRes.data as FuelLog[]);
+        if (mRes.data) setMaintenanceLogs(mRes.data as MaintenanceLog[]);
+      } catch (err) {
+        console.error('Erro ao carregar dados do dashboard financeiro:', err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, period]
+  );
+
+  useEffect(() => {
+    let ignore = false;
+
+    const load = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      const { startDate, endDate } = getDateRange(period);
+
+      try {
+        let eQuery = supabase.from('daily_earnings').select('*').eq('user_id', user.id);
+        let fQuery = supabase.from('fuel_logs').select('*').eq('user_id', user.id);
+        let mQuery = supabase.from('maintenance_logs').select('*').eq('user_id', user.id);
+
+        if (startDate) {
+          eQuery = eQuery.gte('data', startDate);
+          fQuery = fQuery.gte('data', startDate);
+          mQuery = mQuery.gte('data', startDate);
+        }
+        if (endDate) {
+          eQuery = eQuery.lte('data', endDate);
+          fQuery = fQuery.lte('data', endDate);
+          mQuery = mQuery.lte('data', endDate);
+        }
+
+        const [eRes, fRes, mRes] = await Promise.all([
+          eQuery.order('data', { ascending: true }),
+          fQuery.order('data', { ascending: true }),
+          mQuery.order('data', { ascending: true }),
+        ]);
+
+        if (!ignore) {
+          if (eRes.data) setEarnings(eRes.data as DailyEarning[]);
+          if (fRes.data) setFuelLogs(fRes.data as FuelLog[]);
+          if (mRes.data) setMaintenanceLogs(mRes.data as MaintenanceLog[]);
+        }
+      } catch (err) {
+        if (!ignore) console.error('Erro ao carregar dados do dashboard:', err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      ignore = true;
+    };
+  }, [user, period]);
+
+  // Cálculos consolidados dos 4 Cards Principais
+  // a) Faturamento Bruto
+  const faturamentoBruto = useMemo(() => {
+    return earnings.reduce((acc, curr) => {
+      const valor =
+        typeof curr.faturamento_bruto === 'number'
+          ? curr.faturamento_bruto
+          : curr.qtd_pecas * curr.valor_unitario_peca + curr.valor_extra_bonus;
+      return acc + valor;
+    }, 0);
+  }, [earnings]);
+
+  // b) Despesas Totais
+  const despesasCombustivel = useMemo(() => {
+    return fuelLogs.reduce((acc, curr) => acc + (curr.valor_total_abastecido || 0), 0);
+  }, [fuelLogs]);
+
+  const despesasOficina = useMemo(() => {
+    return maintenanceLogs.reduce((acc, curr) => {
+      const valor =
+        typeof curr.valor_total === 'number'
+          ? curr.valor_total
+          : curr.valor_pecas + curr.valor_mao_de_obra;
+      return acc + valor;
+    }, 0);
+  }, [maintenanceLogs]);
+
+  const despesasTotais = useMemo(() => {
+    return despesasCombustivel + despesasOficina;
+  }, [despesasCombustivel, despesasOficina]);
+
+  // c) Lucro Líquido Real
+  const lucroLiquidoReal = useMemo(() => {
+    return faturamentoBruto - despesasTotais;
+  }, [faturamentoBruto, despesasTotais]);
+
+  const margemLucro = useMemo(() => {
+    if (faturamentoBruto > 0) {
+      return (lucroLiquidoReal / faturamentoBruto) * 100;
+    }
+    return 0;
+  }, [lucroLiquidoReal, faturamentoBruto]);
+
+  // d) Indicadores por KM
+  const totalKmRodados = useMemo(() => {
+    return earnings.reduce((acc, curr) => acc + (curr.km_rodado || 0), 0);
+  }, [earnings]);
+
+  const ganhoBrutoPorKm = useMemo(() => {
+    if (totalKmRodados > 0 && faturamentoBruto > 0) {
+      return faturamentoBruto / totalKmRodados;
+    }
+    return 0;
+  }, [faturamentoBruto, totalKmRodados]);
+
+  const lucroLiquidoPorKm = useMemo(() => {
+    if (totalKmRodados > 0 && lucroLiquidoReal !== 0) {
+      return lucroLiquidoReal / totalKmRodados;
+    }
+    return 0;
+  }, [lucroLiquidoReal, totalKmRodados]);
+
+  // Agrupamento diário para o Gráfico de Barras
+  const dailyBarData = useMemo(() => {
+    const map = new Map<string, { faturamento: number; despesas: number }>();
+
+    // Soma faturamento por data
+    earnings.forEach((e) => {
+      const d = e.data;
+      if (!d) return;
+      const prev = map.get(d) || { faturamento: 0, despesas: 0 };
+      const val =
+        typeof e.faturamento_bruto === 'number'
+          ? e.faturamento_bruto
+          : e.qtd_pecas * e.valor_unitario_peca + e.valor_extra_bonus;
+      map.set(d, { ...prev, faturamento: prev.faturamento + val });
+    });
+
+    // Soma combustível por data
+    fuelLogs.forEach((f) => {
+      const d = f.data;
+      if (!d) return;
+      const prev = map.get(d) || { faturamento: 0, despesas: 0 };
+      map.set(d, { ...prev, despesas: prev.despesas + (f.valor_total_abastecido || 0) });
+    });
+
+    // Soma oficina por data
+    maintenanceLogs.forEach((m) => {
+      const d = m.data;
+      if (!d) return;
+      const prev = map.get(d) || { faturamento: 0, despesas: 0 };
+      const val =
+        typeof m.valor_total === 'number'
+          ? m.valor_total
+          : m.valor_pecas + m.valor_mao_de_obra;
+      map.set(d, { ...prev, despesas: prev.despesas + val });
+    });
+
+    const sortedDates = Array.from(map.keys()).sort();
+
+    return sortedDates.map((date) => {
+      const item = map.get(date)!;
+      return {
+        dateRaw: date,
+        data: formatDateShort(date),
+        faturamento: Number(item.faturamento.toFixed(2)),
+        despesas: Number(item.despesas.toFixed(2)),
+        lucro: Number((item.faturamento - item.despesas).toFixed(2)),
+      };
+    });
+  }, [earnings, fuelLogs, maintenanceLogs]);
+
+  // Dados para o Gráfico de Rosca (Proporção de Despesas)
+  const donutData = useMemo(() => {
+    const list = [];
+    if (despesasCombustivel > 0) {
+      list.push({
+        name: 'Combustível',
+        value: Number(despesasCombustivel.toFixed(2)),
+        color: '#f59e0b', // amber-500
+      });
+    }
+    if (despesasOficina > 0) {
+      list.push({
+        name: 'Oficina & Peças',
+        value: Number(despesasOficina.toFixed(2)),
+        color: '#3b82f6', // blue-500
+      });
+    }
+    return list;
+  }, [despesasCombustivel, despesasOficina]);
+
+  const periodButtons: { id: PeriodFilter; label: string }[] = [
+    { id: 'today', label: 'Hoje' },
+    { id: '7days', label: 'Últimos 7 dias' },
+    { id: 'month', label: 'Este Mês' },
+    { id: 'all', label: 'Todo o Período' },
+  ];
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Top Header: Título e Filtro de Período */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400">
+              <BarChart3 className="w-5 h-5 stroke-[2.2]" />
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              Dashboard Financeiro
+            </h2>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Consolidado de receitas, custos operacionais e margem de lucro
+          </p>
+        </div>
+
+        {/* Filtro de Período */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto">
+          {periodButtons.map((btn) => (
+            <button
+              key={btn.id}
+              type="button"
+              onClick={() => setPeriod(btn.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                period === btn.id
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              {btn.label}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => fetchData(true)}
+            disabled={loading}
+            title="Atualizar dados"
+            className="p-1.5 ml-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* 4 CARDS PRINCIPAIS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        {/* Card A: Faturamento Bruto */}
+        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Faturamento Bruto
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 stroke-[2.2]" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">
+            {formatCurrency(faturamentoBruto)}
+          </div>
+          <div className="mt-2 text-xs text-slate-400 flex items-center gap-1">
+            <span className="text-emerald-400 font-semibold">{earnings.length}</span> dias de produção
+          </div>
+        </div>
+
+        {/* Card B: Despesas Totais */}
+        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Despesas Totais
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+              <TrendingDown className="w-4 h-4 stroke-[2.2]" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">
+            {formatCurrency(despesasTotais)}
+          </div>
+          <div className="mt-2 text-[11px] text-slate-400 flex flex-wrap gap-x-2">
+            <span className="text-amber-400 font-medium">⛽ {formatCurrency(despesasCombustivel)}</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-blue-400 font-medium">🔧 {formatCurrency(despesasOficina)}</span>
+          </div>
+        </div>
+
+        {/* Card C: Lucro Líquido Real (Destaque Verde se >= 0, Vermelho se < 0) */}
+        <div
+          className={`border rounded-3xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md ${
+            lucroLiquidoReal >= 0
+              ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/40 ring-1 ring-emerald-500/20'
+              : 'bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/40 border-rose-500/40 ring-1 ring-rose-500/20'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Lucro Líquido Real
+            </span>
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                lucroLiquidoReal >= 0
+                  ? 'bg-emerald-500/20 text-emerald-300'
+                  : 'bg-rose-500/20 text-rose-300'
+              }`}
+            >
+              <DollarSign className="w-4 h-4 stroke-[2.5]" />
+            </div>
+          </div>
+          <div
+            className={`text-2xl sm:text-3xl font-black mt-3 tracking-tight ${
+              lucroLiquidoReal >= 0 ? 'text-emerald-400' : 'text-rose-400'
+            }`}
+          >
+            {formatCurrency(lucroLiquidoReal)}
+          </div>
+          <div className="mt-2 text-xs flex items-center gap-1.5">
+            <span
+              className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                lucroLiquidoReal >= 0
+                  ? 'bg-emerald-500/20 text-emerald-300'
+                  : 'bg-rose-500/20 text-rose-300'
+              }`}
+            >
+              Margem: {margemLucro.toFixed(1)}%
+            </span>
+            <span className="text-[11px] text-slate-400">
+              {lucroLiquidoReal >= 0 ? 'Lucro positivo' : 'Déficit no período'}
+            </span>
+          </div>
+        </div>
+
+        {/* Card D: Indicadores por KM */}
+        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Indicadores por KM
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center">
+              <Gauge className="w-4 h-4 stroke-[2.2]" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight font-mono">
+            {totalKmRodados.toLocaleString('pt-BR')} <span className="text-sm font-normal text-slate-400">km</span>
+          </div>
+          <div className="mt-2 text-[11px] text-slate-300 flex flex-wrap gap-x-2">
+            <span>
+              Bruto: <strong className="text-emerald-400 font-mono">{formatCurrency(ganhoBrutoPorKm)}/km</strong>
+            </span>
+            <span className="text-slate-600">•</span>
+            <span>
+              Líquido: <strong className={`${lucroLiquidoPorKm >= 0 ? 'text-teal-400' : 'text-rose-400'} font-mono`}>{formatCurrency(lucroLiquidoPorKm)}/km</strong>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* GRÁFICO DE BARRAS RESPONSIVO: FATURAMENTO VS DESPESAS VS LUCRO LÍQUIDO */}
+      <section className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-800/80 pb-4 mb-6">
+          <div>
+            <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-emerald-400" />
+              Evolução Diária: Faturamento vs. Despesas vs. Lucro
+            </h3>
+            <p className="text-xs text-slate-400">
+              Comparativo dia a dia dos ganhos operacionais e custos
+            </p>
+          </div>
+        </div>
+
+        {dailyBarData.length === 0 ? (
+          <div className="py-12 text-center text-slate-400 text-xs">
+            Nenhum lançamento no período selecionado para exibição do gráfico.
+          </div>
+        ) : (
+          <div className="h-72 sm:h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyBarData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.4} />
+                <XAxis
+                  dataKey="data"
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: '#334155' }}
+                />
+                <YAxis
+                  stroke="#94a3b8"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={{ stroke: '#334155' }}
+                  tickFormatter={(val) => `R$${val}`}
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 shadow-2xl text-xs space-y-1.5">
+                          <p className="font-bold text-slate-300 border-b border-slate-800 pb-1">
+                            Dia: {label}
+                          </p>
+                          {payload.map((entry, index) => (
+                            <div key={`item-${index}`} className="flex items-center justify-between gap-4">
+                              <span style={{ color: entry.color }} className="font-medium">
+                                {entry.name}:
+                              </span>
+                              <span className="font-mono font-bold text-white">
+                                {formatCurrency(entry.value as number)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend
+                  wrapperStyle={{ paddingTop: '16px', fontSize: '12px' }}
+                  iconType="circle"
+                />
+                <Bar dataKey="faturamento" name="Faturamento Bruto" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="despesas" name="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="lucro" name="Lucro Líquido" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </section>
+
+      {/* GRÁFICO DE ROSCA: PROPORÇÃO DE GASTOS (COMBUSTÍVEL VS OFICINA) */}
+      <section className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl backdrop-blur-md">
+        <div className="border-b border-slate-800/80 pb-4 mb-6">
+          <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+            <PieIcon className="w-5 h-5 text-amber-400" />
+            Composição das Despesas (Combustível vs. Oficina)
+          </h3>
+          <p className="text-xs text-slate-400">
+            Distribuição percentual entre gastos de abastecimento e manutenção veicular
+          </p>
+        </div>
+
+        {donutData.length === 0 ? (
+          <div className="py-10 text-center text-slate-400 text-xs">
+            Nenhuma despesa registrada no período selecionado.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            {/* Gráfico */}
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={donutData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {donutData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="#0f172a" strokeWidth={3} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const dataItem = payload[0];
+                        const val = dataItem.value as number;
+                        const pct = despesasTotais > 0 ? ((val / despesasTotais) * 100).toFixed(1) : 0;
+                        return (
+                          <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 shadow-2xl text-xs space-y-1">
+                            <p className="font-bold text-white">{dataItem.name}</p>
+                            <p className="font-mono text-emerald-400">{formatCurrency(val)} ({pct}%)</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Detalhes da Proporção em Lista */}
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full bg-amber-500 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-white">Combustível</p>
+                    <p className="text-[11px] text-slate-400">{fuelLogs.length} abastecimentos</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-extrabold text-amber-400 font-mono">
+                    {formatCurrency(despesasCombustivel)}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {despesasTotais > 0 ? ((despesasCombustivel / despesasTotais) * 100).toFixed(1) : 0}% do total
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full bg-blue-500 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-white">Oficina & Manutenção</p>
+                    <p className="text-[11px] text-slate-400">{maintenanceLogs.length} serviços</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-extrabold text-blue-400 font-mono">
+                    {formatCurrency(despesasOficina)}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {despesasTotais > 0 ? ((despesasOficina / despesasTotais) * 100).toFixed(1) : 0}% do total
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  Despesa Total consolidada: <strong>{formatCurrency(despesasTotais)}</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};

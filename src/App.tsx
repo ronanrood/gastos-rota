@@ -5,11 +5,12 @@ import { AuthPage } from './components/auth/AuthPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { type ViewType } from './components/layout/Drawer';
 import { DailyEarningsPage } from './components/earnings/DailyEarningsPage';
+import { DashboardPage } from './components/dashboard/DashboardPage';
 import { VehiclePage } from './components/vehicle/VehiclePage';
 import { FuelPage } from './components/fuel/FuelPage';
 import { MaintenancePage } from './components/maintenance/MaintenancePage';
-import { PlaceholderView } from './components/views/PlaceholderView';
-import { Truck } from 'lucide-react';
+import { AdminPage } from './components/admin/AdminPage';
+import { Truck, ShieldAlert, LogOut } from 'lucide-react';
 
 const HASH_TO_VIEW: Record<string, ViewType> = {
   '#ganhos': 'earnings',
@@ -30,7 +31,7 @@ const VIEW_TO_HASH: Record<ViewType, string> = {
 };
 
 const MainContent: React.FC = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>('earnings');
 
   // Sincroniza estado da visualização com a hash da URL
@@ -79,18 +80,43 @@ const MainContent: React.FC = () => {
     return <AuthPage />;
   }
 
+  // Se o motorista estiver inativo, bloqueia o acesso às telas internas
+  if (profile?.status === 'inactive') {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white px-4">
+        <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl backdrop-blur-md">
+          <div className="w-14 h-14 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-bold text-white tracking-tight">
+            Conta Desativada pelo Administrador
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
+            Seu acesso ao sistema foi suspenso temporariamente. Entre em contato com o suporte ou com a administração da frota para reativar seu cadastro.
+          </p>
+          <div className="mt-6 pt-5 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={signOut}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 active:bg-rose-500/30 text-rose-300 font-semibold text-xs transition cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              Encerrar Sessão
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AppLayout currentView={effectiveView} onSelectView={handleSelectView}>
       {effectiveView === 'earnings' && <DailyEarningsPage />}
-      {effectiveView === 'vehicle' && <VehiclePage />}
+      {effectiveView === 'dashboard' && <DashboardPage />}
       {effectiveView === 'fuel' && <FuelPage />}
       {effectiveView === 'maintenance' && <MaintenancePage />}
-      {(effectiveView === 'dashboard' || effectiveView === 'admin') && (
-        <PlaceholderView
-          view={effectiveView}
-          onGoToEarnings={() => handleSelectView('earnings')}
-        />
-      )}
+      {effectiveView === 'vehicle' && <VehiclePage />}
+      {effectiveView === 'admin' && <AdminPage />}
     </AppLayout>
   );
 };
