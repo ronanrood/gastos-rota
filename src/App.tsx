@@ -9,17 +9,9 @@ import { DashboardPage } from './components/dashboard/DashboardPage';
 import { VehiclePage } from './components/vehicle/VehiclePage';
 import { FuelPage } from './components/fuel/FuelPage';
 import { MaintenancePage } from './components/maintenance/MaintenancePage';
+import { ProfilePage } from './components/profile/ProfilePage';
 import { AdminPage } from './components/admin/AdminPage';
 import { Truck, ShieldAlert, LogOut } from 'lucide-react';
-
-const HASH_TO_VIEW: Record<string, ViewType> = {
-  '#ganhos': 'earnings',
-  '#dashboard': 'dashboard',
-  '#combustivel': 'fuel',
-  '#manutencao': 'maintenance',
-  '#veiculo': 'vehicle',
-  '#admin': 'admin',
-};
 
 const VIEW_TO_HASH: Record<ViewType, string> = {
   earnings: '#ganhos',
@@ -27,25 +19,64 @@ const VIEW_TO_HASH: Record<ViewType, string> = {
   fuel: '#combustivel',
   maintenance: '#manutencao',
   vehicle: '#veiculo',
+  profile: '#perfil',
   admin: '#admin',
+};
+
+// Reconhece tanto a hash da URL (#perfil, #/perfil) quanto o pathname (/perfil)
+const resolveViewFromLocation = (): ViewType => {
+  if (typeof window === 'undefined') return 'earnings';
+
+  const rawHash = window.location.hash.toLowerCase().replace(/^#\/?/, '').trim();
+  const rawPath = window.location.pathname.toLowerCase().replace(/^\/?/, '').replace(/\/$/, '').trim();
+
+  const route = rawHash || rawPath;
+
+  switch (route) {
+    case 'perfil':
+    case 'profile':
+      return 'profile';
+    case 'dashboard':
+    case 'painel':
+      return 'dashboard';
+    case 'combustivel':
+    case 'fuel':
+      return 'fuel';
+    case 'manutencao':
+    case 'maintenance':
+    case 'oficina':
+      return 'maintenance';
+    case 'veiculo':
+    case 'vehicle':
+      return 'vehicle';
+    case 'admin':
+      return 'admin';
+    case 'ganhos':
+    case 'earnings':
+    case 'inicio':
+    default:
+      return 'earnings';
+  }
 };
 
 const MainContent: React.FC = () => {
   const { user, profile, loading, signOut } = useAuth();
-  const [currentView, setCurrentView] = useState<ViewType>('earnings');
+  const [currentView, setCurrentView] = useState<ViewType>(() => resolveViewFromLocation());
 
-  // Sincroniza estado da visualização com a hash da URL
+  // Sincroniza estado da visualização com a hash e histórico de navegação da URL
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.toLowerCase();
-      if (hash && HASH_TO_VIEW[hash]) {
-        setCurrentView(HASH_TO_VIEW[hash]);
-      }
+    const handleLocationChange = () => {
+      const resolved = resolveViewFromLocation();
+      setCurrentView(resolved);
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    handleLocationChange();
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   const handleSelectView = (view: ViewType) => {
@@ -55,7 +86,10 @@ const MainContent: React.FC = () => {
       return;
     }
     setCurrentView(view);
-    window.location.hash = VIEW_TO_HASH[view] || '#ganhos';
+    const targetHash = VIEW_TO_HASH[view] || '#ganhos';
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
+    }
   };
 
   // Se o usuário não for admin mas a rota atual for admin, renderiza earnings
@@ -116,6 +150,7 @@ const MainContent: React.FC = () => {
       {effectiveView === 'fuel' && <FuelPage />}
       {effectiveView === 'maintenance' && <MaintenancePage />}
       {effectiveView === 'vehicle' && <VehiclePage />}
+      {effectiveView === 'profile' && <ProfilePage />}
       {effectiveView === 'admin' && <AdminPage />}
     </AppLayout>
   );

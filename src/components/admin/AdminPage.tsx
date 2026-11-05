@@ -19,7 +19,22 @@ import {
   User,
   X,
   Check,
+  Eye,
+  Copy,
+  ExternalLink,
+  MapPin,
+  Phone,
+  CreditCard,
+  Truck,
+  Navigation,
+  CalendarDays,
 } from 'lucide-react';
+import {
+  formatCpfCnpj,
+  formatPhone,
+  formatCep,
+  getInitials,
+} from '../../utils/formatters';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -55,6 +70,21 @@ export const AdminPage: React.FC = () => {
   // Feedback geral da tela
   const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // Modal "Detalhes do Motorista"
+  const [selectedDriver, setSelectedDriver] = useState<Profile | null>(null);
+  const [copiedAdminPix, setCopiedAdminPix] = useState(false);
+
+  const handleCopyAdminPix = async (pixKey: string) => {
+    if (!pixKey) return;
+    try {
+      await navigator.clipboard.writeText(pixKey);
+      setCopiedAdminPix(true);
+      setTimeout(() => setCopiedAdminPix(false), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar PIX:', err);
+    }
+  };
 
   // Busca dados de usuários e faturamento global da plataforma
   const loadAdminData = useCallback(async (showLoading = false) => {
@@ -474,8 +504,16 @@ export const AdminPage: React.FC = () => {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-sm shrink-0">
-                          {p.nome ? p.nome.charAt(0).toUpperCase() : 'M'}
+                        <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs shrink-0 overflow-hidden">
+                          {p.avatar_url ? (
+                            <img
+                              src={p.avatar_url}
+                              alt={p.nome}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            getInitials(p.nome)
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -491,6 +529,11 @@ export const AdminPage: React.FC = () => {
                           <span className="text-xs text-slate-400 font-mono block truncate mt-0.5">
                             {p.email}
                           </span>
+                          {(p.transportadora || p.rota) && (
+                            <span className="text-[10px] text-emerald-400 block truncate mt-0.5 font-medium">
+                              🚚 {p.transportadora} {p.rota ? `• ${p.rota}` : ''}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-400 font-mono shrink-0">
@@ -544,6 +587,16 @@ export const AdminPage: React.FC = () => {
                         )}
                       </button>
                     </div>
+
+                    {/* Botão Ver Detalhes e PIX no Mobile */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDriver(p)}
+                      className="w-full h-10 min-h-[40px] rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-[0.98] cursor-pointer"
+                    >
+                      <Eye className="w-4 h-4 text-emerald-400" />
+                      Ver Ficha, Rota e PIX
+                    </button>
                   </div>
                 );
               })}
@@ -556,8 +609,10 @@ export const AdminPage: React.FC = () => {
                   <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
                     <th className="py-3 px-3">Motorista</th>
                     <th className="py-3 px-3">E-mail</th>
+                    <th className="py-3 px-3">Rota / Empresa</th>
                     <th className="py-3 px-3 text-center">Função</th>
                     <th className="py-3 px-3 text-center">Status</th>
+                    <th className="py-3 px-3 text-center">Ficha</th>
                     <th className="py-3 px-3 text-right">Cadastrado em</th>
                   </tr>
                 </thead>
@@ -568,11 +623,19 @@ export const AdminPage: React.FC = () => {
 
                     return (
                       <tr key={p.id} className="hover:bg-slate-950/40 transition">
-                        {/* Nome */}
+                        {/* Nome + Avatar */}
                         <td className="py-3.5 px-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs shrink-0">
-                              {p.nome ? p.nome.charAt(0).toUpperCase() : 'M'}
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs shrink-0 overflow-hidden">
+                              {p.avatar_url ? (
+                                <img
+                                  src={p.avatar_url}
+                                  alt={p.nome}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                getInitials(p.nome)
+                              )}
                             </div>
                             <div>
                               <span className="font-bold text-white block">
@@ -590,6 +653,17 @@ export const AdminPage: React.FC = () => {
                         {/* E-mail */}
                         <td className="py-3.5 px-3 text-slate-300 font-mono text-[11px]">
                           {p.email}
+                        </td>
+
+                        {/* Rota / Transportadora */}
+                        <td className="py-3.5 px-3 text-slate-300 text-[11px]">
+                          {p.transportadora || p.rota ? (
+                            <span className="truncate max-w-[150px] block">
+                              {p.transportadora} {p.rota ? `• ${p.rota}` : ''}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 italic">-</span>
+                          )}
                         </td>
 
                         {/* Role Toggle */}
@@ -644,6 +718,19 @@ export const AdminPage: React.FC = () => {
                                 Inativo
                               </>
                             )}
+                          </button>
+                        </td>
+
+                        {/* Ver Ficha / Detalhes */}
+                        <td className="py-3.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDriver(p)}
+                            title="Ver Ficha Completa e PIX do Motorista"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[10px] font-bold uppercase transition active:scale-[0.96] cursor-pointer"
+                          >
+                            <Eye className="w-3 h-3 text-emerald-400" />
+                            Ficha
                           </button>
                         </td>
 
@@ -787,6 +874,203 @@ export const AdminPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DETALHES DO MOTORISTA (FICHA CADASTRAL, PIX E ROTA) */}
+      {selectedDriver && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-7 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4 mb-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-14 h-14 rounded-full bg-slate-800 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-lg shrink-0 overflow-hidden shadow-md">
+                  {selectedDriver.avatar_url ? (
+                    <img
+                      src={selectedDriver.avatar_url}
+                      alt={selectedDriver.nome}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getInitials(selectedDriver.nome)
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-bold text-white truncate">
+                    {selectedDriver.nome || 'Motorista'}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono truncate">{selectedDriver.email}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                        selectedDriver.role === 'admin'
+                          ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      }`}
+                    >
+                      {selectedDriver.role === 'admin' ? 'Administrador' : 'Motorista'}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                        selectedDriver.status === 'active'
+                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                      }`}
+                    >
+                      {selectedDriver.status === 'active' ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedDriver(null)}
+                className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition active:scale-[0.95] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Conteúdo da Ficha */}
+            <div className="space-y-4">
+              {/* Destaque CHAVE PIX */}
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5" />
+                    Chave PIX para Pagamento
+                  </span>
+                  {selectedDriver.chave_pix && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyAdminPix(selectedDriver.chave_pix || '')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-xs transition active:scale-[0.96] cursor-pointer shadow-xs"
+                    >
+                      {copiedAdminPix ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          Copiar Chave
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm font-mono font-bold text-white break-all mt-1">
+                  {selectedDriver.chave_pix || 'Chave PIX ainda não cadastrada pelo motorista'}
+                </p>
+              </div>
+
+              {/* Informações Pessoais e Operacionais */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-0.5">
+                    CPF ou CNPJ
+                  </span>
+                  <span className="text-xs font-mono font-bold text-white">
+                    {selectedDriver.cpf_cnpj ? formatCpfCnpj(selectedDriver.cpf_cnpj) : 'Não informado'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-0.5 flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-emerald-400" />
+                      Telefone / WhatsApp
+                    </span>
+                    {selectedDriver.telefone && (
+                      <a
+                        href={`https://wa.me/55${selectedDriver.telefone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-emerald-400 hover:text-emerald-300 font-semibold inline-flex items-center gap-0.5"
+                      >
+                        WhatsApp <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    )}
+                  </div>
+                  <span className="text-xs font-mono font-bold text-white">
+                    {selectedDriver.telefone ? formatPhone(selectedDriver.telefone) : 'Não informado'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-0.5 flex items-center gap-1">
+                    <Truck className="w-3 h-3 text-teal-400" />
+                    Transportadora
+                  </span>
+                  <span className="text-xs font-bold text-white">
+                    {selectedDriver.transportadora || 'Não informada'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-0.5 flex items-center gap-1">
+                    <Navigation className="w-3 h-3 text-teal-400" />
+                    Rota de Entrega
+                  </span>
+                  <span className="text-xs font-bold text-white">
+                    {selectedDriver.rota || 'Não informada'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Endereço */}
+              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                  Endereço Cadastrado
+                </span>
+                {selectedDriver.endereco || selectedDriver.cidade ? (
+                  <p className="text-xs text-slate-200 leading-relaxed">
+                    {selectedDriver.endereco ? `${selectedDriver.endereco}, ` : ''}
+                    {selectedDriver.numero ? `nº ${selectedDriver.numero} - ` : ''}
+                    {selectedDriver.bairro ? `${selectedDriver.bairro}, ` : ''}
+                    {selectedDriver.cidade ? `${selectedDriver.cidade}` : ''}
+                    {selectedDriver.estado ? ` - ${selectedDriver.estado}` : ''}
+                    {selectedDriver.cep ? ` (CEP: ${formatCep(selectedDriver.cep)})` : ''}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500 italic">Endereço ainda não preenchido.</p>
+                )}
+              </div>
+
+              {/* Configuração de Ciclo */}
+              <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1 flex items-center gap-1">
+                  <CalendarDays className="w-3.5 h-3.5 text-emerald-400" />
+                  Ciclo de Recebimento
+                </span>
+                <p className="text-slate-300">
+                  Frequência: <strong className="text-white capitalize">{selectedDriver.tipo_recebimento || 'Quinzenal'}</strong>
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  • Pagamento 1: dia {selectedDriver.dia_pagamento_1 || 17} (Corte {selectedDriver.corte_1_inicio || 16} a {selectedDriver.corte_1_fim || 31})
+                </p>
+                {selectedDriver.tipo_recebimento !== 'mensal' && (
+                  <p className="text-[11px] text-slate-400">
+                    • Pagamento 2: dia {selectedDriver.dia_pagamento_2 || 2} (Corte {selectedDriver.corte_2_inicio || 1} a {selectedDriver.corte_2_fim || 15})
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Modal */}
+            <div className="pt-4 mt-4 border-t border-slate-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedDriver(null)}
+                className="w-full sm:w-auto h-11 min-h-[44px] px-6 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white font-bold text-xs transition active:scale-[0.98] cursor-pointer"
+              >
+                Fechar Ficha
+              </button>
+            </div>
           </div>
         </div>
       )}

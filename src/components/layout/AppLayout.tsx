@@ -16,6 +16,7 @@ const VIEW_TITLES: Record<ViewType, string> = {
   fuel: 'Combustível',
   maintenance: 'Oficina e Manutenção',
   vehicle: 'Meu Veículo',
+  profile: 'Meu Perfil',
   admin: 'Painel Admin',
 };
 
@@ -25,6 +26,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const handleOpenProfile = () => {
+    setDrawerOpen(false);
+    onSelectView('profile');
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950 overflow-x-hidden">
@@ -32,6 +37,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <Header
         onOpenDrawer={() => setDrawerOpen(true)}
         currentTitle={VIEW_TITLES[currentView] || 'Gastos Rota'}
+        onOpenProfile={handleOpenProfile}
       />
 
       {/* Gaveta Lateral (Menu Hambúrguer) */}

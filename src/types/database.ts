@@ -8,6 +8,18 @@ export interface Profile {
   email: string;
   role: UserRole;
   status: UserStatus;
+  avatar_url?: string | null;
+  telefone?: string | null;
+  cpf_cnpj?: string | null;
+  chave_pix?: string | null;
+  transportadora?: string | null;
+  rota?: string | null;
+  cep?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
   tipo_recebimento?: PaymentCycleType | null;
   dia_pagamento_1?: number | null;
   corte_1_inicio?: number | null;

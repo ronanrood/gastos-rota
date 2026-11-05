@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../../contexts/useAuth';
 import { PaymentConfigModal } from '../payment/PaymentConfigModal';
 import { InstallPwaBanner } from '../pwa/InstallPwaBanner';
+import { getInitials } from '../../utils/formatters';
 
 export type ViewType =
   | 'earnings'
@@ -23,6 +24,7 @@ export type ViewType =
   | 'fuel'
   | 'maintenance'
   | 'vehicle'
+  | 'profile'
   | 'admin';
 
 interface DrawerProps {
@@ -91,6 +93,12 @@ export const Drawer: React.FC<DrawerProps> = ({
       subtitle: 'Dados do carro e quilometragem',
       icon: Car,
     },
+    {
+      id: 'profile' as ViewType,
+      label: 'Meu Perfil',
+      subtitle: 'Dados cadastrais, PIX e rota',
+      icon: User,
+    },
     // Condicional: Painel Admin
     ...(isAdmin
       ? [
@@ -106,8 +114,8 @@ export const Drawer: React.FC<DrawerProps> = ({
   ];
 
   const handleItemClick = (id: ViewType) => {
-    onSelectView(id);
     onClose();
+    onSelectView(id);
   };
 
   return (
@@ -154,17 +162,39 @@ export const Drawer: React.FC<DrawerProps> = ({
           </button>
         </div>
 
-        {/* User Profile Card inside Drawer */}
+        {/* User Profile Card inside Drawer - Clicável para abrir Perfil */}
         <div className="p-4 bg-slate-950/60 border-b border-slate-800/80">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-slate-800 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 font-bold shadow-sm">
-              <User className="w-5 h-5" />
+          <a
+            href="#perfil"
+            onClick={(e) => {
+              e.preventDefault();
+              handleItemClick('profile');
+            }}
+            title="Acessar Meu Perfil"
+            className="w-full flex items-center gap-3 text-left p-2 rounded-2xl hover:bg-slate-800/80 transition group cursor-pointer block border border-transparent hover:border-slate-700/60"
+          >
+            {/* Avatar com Foto ou Iniciais */}
+            <div className="w-12 h-12 rounded-full bg-slate-800 border-2 border-emerald-500/40 group-hover:border-emerald-400 flex items-center justify-center text-emerald-400 shrink-0 font-bold shadow-sm overflow-hidden cursor-pointer transition-colors">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.nome || 'Avatar'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-sm">{getInitials(profile?.nome)}</span>
+              )}
             </div>
-            <div className="overflow-hidden">
-              <h3 className="text-sm font-bold text-white truncate">
+
+            <div className="overflow-hidden flex-1 min-w-0 cursor-pointer">
+              <h3 className="text-sm font-bold text-white group-hover:text-emerald-400 transition truncate">
                 {profile?.nome || 'Motorista'}
               </h3>
-              <p className="text-xs text-slate-400 truncate">{profile?.email}</p>
+              <p className="text-xs text-slate-400 truncate">
+                {profile?.transportadora || profile?.rota
+                  ? `${profile.transportadora || ''}${profile.transportadora && profile.rota ? ' • ' : ''}${profile.rota || ''}`
+                  : profile?.email}
+              </p>
               <div className="mt-1 flex items-center gap-1.5">
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
@@ -176,9 +206,12 @@ export const Drawer: React.FC<DrawerProps> = ({
                   {isAdmin ? <ShieldCheck className="w-3 h-3" /> : null}
                   {isAdmin ? 'Administrador' : 'Motorista'}
                 </span>
+                <span className="text-[10px] text-emerald-400/90 font-medium group-hover:underline">
+                  Ver Perfil →
+                </span>
               </div>
             </div>
-          </div>
+          </a>
 
           {/* Botão de Atalho para Configurar Pagamento */}
           <button

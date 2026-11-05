@@ -1,6 +1,6 @@
 import React from 'react';
 import { type ViewType } from '../layout/Drawer';
-import { BarChart3, Fuel, Wrench, Car, ShieldCheck, ArrowLeft, Clock } from 'lucide-react';
+import { BarChart3, Fuel, Wrench, Car, ShieldCheck, ArrowLeft, Clock, User } from 'lucide-react';
 
 interface PlaceholderViewProps {
   view: ViewType;
@@ -67,6 +67,19 @@ const VIEW_CONFIG: Record<
       'Cadastro de marca, modelo, ano e odômetro atual',
       'Configuração das médias esperadas por tipo de combustível',
       'Monitoramento de desgaste preventivo por km',
+    ],
+  },
+  profile: {
+    title: 'Meu Perfil',
+    description: 'Gerenciamento de dados cadastrais, operacionais, chave PIX e segurança.',
+    table: 'Tabela profiles e bucket avatars',
+    icon: User,
+    color: 'emerald',
+    features: [
+      'Foto de perfil e dados de identificação',
+      'Transportadora, rota e chave PIX',
+      'Endereço completo com busca por CEP',
+      'Alteração de e-mail e senha de acesso',
     ],
   },
   admin: {
