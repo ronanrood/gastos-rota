@@ -465,7 +465,7 @@ export const DailyEarningsPage: React.FC = () => {
             {/* Campo: Quantidade de Peças */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Quantidade de Peças (`qtd_pecas`)
+                Quantidade de Peças 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -488,7 +488,7 @@ export const DailyEarningsPage: React.FC = () => {
             {/* Campo: Valor Pago por Peça */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Valor Pago por Peça (`valor_unitario_peca`)
+                Valor Pago por Peça 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -511,7 +511,7 @@ export const DailyEarningsPage: React.FC = () => {
             {/* Campo: Bônus Extra */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Bônus Extra / Adicional (`valor_extra_bonus`)
+                Bônus Extra / Adicional 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -533,7 +533,7 @@ export const DailyEarningsPage: React.FC = () => {
             {/* Campo: KM Rodado no dia */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                KM Rodado no Dia (`km_rodado`)
+                KM Rodado no Dia 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">

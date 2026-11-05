@@ -520,7 +520,7 @@ export const FuelPage: React.FC = () => {
             {/* Odômetro KM */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                KM Atual no Odômetro (`km_odometro`)
+                KM Atual no Odômetro 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -543,7 +543,7 @@ export const FuelPage: React.FC = () => {
             {/* Valor Total Abastecido */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Valor Total Pago (`valor_total_abastecido`)
+                Valor Total Pago 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -566,7 +566,7 @@ export const FuelPage: React.FC = () => {
             {/* Preço por Litro ou m³ */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Preço por {getUnidade(tipoCombustivel)} (`preco_por_litro_ou_m3`)
+                Preço por {getUnidade(tipoCombustivel)} 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">

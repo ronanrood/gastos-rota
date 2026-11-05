@@ -492,7 +492,7 @@ export const MaintenancePage: React.FC = () => {
             {/* Nome da Oficina */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Oficina ou Mecânico (`oficina_nome`)
+                Oficina ou Mecânico
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -512,7 +512,7 @@ export const MaintenancePage: React.FC = () => {
             {/* Valor Peças */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Valor das Peças (`valor_pecas`)
+                Valor das Peças 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -534,7 +534,7 @@ export const MaintenancePage: React.FC = () => {
             {/* Valor Mão de Obra */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Valor da Mão de Obra (`valor_mao_de_obra`)
+                Valor da Mão de Obra 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -556,7 +556,7 @@ export const MaintenancePage: React.FC = () => {
             {/* Garantia Até */}
             <div className="sm:col-span-2 lg:col-span-4">
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Garantia Válida Até (`garantia_ate` - opcional)
+                Garantia Válida Até 
               </label>
               <div className="relative max-w-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -575,7 +575,7 @@ export const MaintenancePage: React.FC = () => {
           {/* Descrição do Serviço */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Descrição do Serviço Realizado (`descricao_servico`)
+              Descrição do Serviço Realizado 
             </label>
             <div className="relative">
               <textarea

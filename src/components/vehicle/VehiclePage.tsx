@@ -381,7 +381,7 @@ export const VehiclePage: React.FC = () => {
             </h4>
             <div className="max-w-md">
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Quilometragem Atual (`km_atual`)
+                Quilometragem Atual
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">

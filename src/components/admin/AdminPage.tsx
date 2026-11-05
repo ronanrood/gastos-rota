@@ -460,7 +460,7 @@ export const AdminPage: React.FC = () => {
           <div>
             <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
               <Users className="w-5 h-5 text-emerald-400" />
-              Usuários Cadastrados (`profiles`)
+              Usuários Cadastrados 
             </h3>
             <p className="text-xs text-slate-400">
               Gerencie permissões de acesso e status de ativação
