@@ -14,12 +14,20 @@ import {
   RotateCw,
   Sparkles,
   Zap,
-  Filter,
   Car,
   Info,
   Pencil,
+  RotateCcw,
 } from 'lucide-react';
 import { EditFuelModal } from './EditFuelModal';
+import { HistoryFilterBar } from '../filters/HistoryFilterBar';
+import { FuelFilterSummary } from '../filters/FuelFilterSummary';
+import {
+  type HistoryFilterState,
+  getDefaultFilterState,
+  calculateFilterDateRange,
+  formatCardDateBadge,
+} from '../../utils/filterUtils';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -36,7 +44,7 @@ const formatDate = (dateStr: string): string => {
 };
 
 export const FuelPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // Estados do formulário
   const [data, setData] = useState<string>(() => new Date().toISOString().split('T')[0]);
@@ -49,8 +57,8 @@ export const FuelPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
+  const [filterState, setFilterState] = useState<HistoryFilterState>(getDefaultFilterState);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -290,22 +298,56 @@ export const FuelPage: React.FC = () => {
     }
   };
 
-  // Lista única de meses disponíveis para filtro (extraídos dos registros existentes)
-  const availableMonths = useMemo(() => {
-    const monthsSet = new Set<string>();
-    fuelLogs.forEach((log) => {
-      if (log.data && log.data.length >= 7) {
-        monthsSet.add(log.data.substring(0, 7)); // 'YYYY-MM'
-      }
-    });
-    return Array.from(monthsSet).sort().reverse();
-  }, [fuelLogs]);
-
-  // Registros filtrados pelo mês selecionado
+  // Registros filtrados e ordenados avançados
   const filteredLogs = useMemo(() => {
-    if (selectedMonth === 'all') return fuelLogs;
-    return fuelLogs.filter((log) => log.data && log.data.startsWith(selectedMonth));
-  }, [fuelLogs, selectedMonth]);
+    const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
+    const q = filterState.searchQuery.trim().toLowerCase();
+
+    return fuelLogs
+      .filter((item) => {
+        // Filtro por Data
+        if (startDate && item.data < startDate) return false;
+        if (endDate && item.data > endDate) return false;
+
+        // Filtro por Busca Instantânea (tipo combustível, valor, preço por litro, km, data)
+        if (q) {
+          const combustivel = (item.tipo_combustivel || '').toLowerCase();
+          const dStr = (item.data || '').toLowerCase();
+          const dFormatted = formatDate(item.data).toLowerCase();
+          const valorTotal = (item.valor_total_abastecido || 0).toFixed(2);
+          const preco = (item.preco_por_litro_ou_m3 || 0).toFixed(3);
+          const km = (item.km_odometro || '').toString();
+
+          const matches =
+            combustivel.includes(q) ||
+            dStr.includes(q) ||
+            dFormatted.includes(q) ||
+            valorTotal.includes(q) ||
+            preco.includes(q) ||
+            km.includes(q);
+
+          if (!matches) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const valA = a.valor_total_abastecido || 0;
+        const valB = b.valor_total_abastecido || 0;
+
+        if (filterState.sortBy === 'oldest') {
+          return (a.data || '').localeCompare(b.data || '') || (a.created_at || '').localeCompare(b.created_at || '');
+        }
+        if (filterState.sortBy === 'highest_value') {
+          return valB - valA;
+        }
+        if (filterState.sortBy === 'lowest_value') {
+          return valA - valB;
+        }
+        // padrão: 'recent'
+        return (b.data || '').localeCompare(a.data || '') || (b.created_at || '').localeCompare(a.created_at || '');
+      });
+  }, [fuelLogs, filterState, profile]);
 
   // Estatísticas do período filtrado
   const totalGastoPeriodo = useMemo(() => {
@@ -622,44 +664,32 @@ export const FuelPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Filtro por Mês */}
-            {availableMonths.length > 0 && (
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
-                  <Filter className="w-3.5 h-3.5" />
-                </div>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                >
-                  <option value="all">Todos os meses</option>
-                  {availableMonths.map((m) => {
-                    const [y, mes] = m.split('-');
-                    const dateObj = new Date(parseInt(y, 10), parseInt(mes, 10) - 1, 1);
-                    const label = dateObj.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
-                    return (
-                      <option key={m} value={m}>
-                        {label.charAt(0).toUpperCase() + label.slice(1)}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={refreshVehicleAndLogs}
-              disabled={loadingList}
-              title="Atualizar lista"
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-            >
-              <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={refreshVehicleAndLogs}
+            disabled={loadingList}
+            title="Atualizar lista"
+            className="self-end sm:self-center p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+          >
+            <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
+          </button>
         </div>
+
+        {/* BARRA DE FILTRAGEM AVANÇADA (MÊS, QUINZENA, BUSCA E ORDENAÇÃO) */}
+        <HistoryFilterBar
+          filterState={filterState}
+          onFilterChange={setFilterState}
+          profile={profile}
+          searchPlaceholder="Buscar por combustível, valor, preço por litro, km..."
+          totalFilteredCount={filteredLogs.length}
+        />
+
+        {/* RESUMO DO FILTRO ATIVO (TOTALIZADOR DINÂMICO) */}
+        <FuelFilterSummary
+          items={filteredLogs}
+          filterState={filterState}
+          profile={profile}
+        />
 
         {/* Loading Skeleton */}
         {loadingList && fuelLogs.length === 0 && (
@@ -673,18 +703,39 @@ export const FuelPage: React.FC = () => {
           </div>
         )}
 
-        {/* Empty State */}
-        {!loadingList && filteredLogs.length === 0 && (
+        {/* Empty State Sem Registros */}
+        {!loadingList && fuelLogs.length === 0 && (
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center">
             <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
               <Fuel className="w-6 h-6" />
             </div>
             <h4 className="text-sm font-bold text-white">Nenhum abastecimento encontrado</h4>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              {selectedMonth !== 'all'
-                ? 'Nenhum registro para o mês selecionado. Escolha outro período acima.'
-                : 'Registre seus abastecimentos no formulário acima para acompanhar gastos e litros abastecidos.'}
+              Registre seus abastecimentos no formulário acima para acompanhar gastos e litros abastecidos.
             </p>
+          </div>
+        )}
+
+        {/* Empty State Filtro Ativo */}
+        {!loadingList && fuelLogs.length > 0 && filteredLogs.length === 0 && (
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+              <Info className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Nenhum abastecimento encontrado neste período</h4>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                Não há registros para o mês ou termos de busca selecionados. Alterne o período ou limpe os filtros.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFilterState(getDefaultFilterState())}
+              className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[40px] rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold transition active:scale-95 cursor-pointer border border-slate-700"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Limpar Filtros e Ver Todos
+            </button>
           </div>
         )}
 
@@ -698,6 +749,7 @@ export const FuelPage: React.FC = () => {
 
             const isConfirming = confirmDeleteId === item.id;
             const isDeleting = deletingId === item.id;
+            const { fullBadge } = formatCardDateBadge(item.data, profile);
 
             return (
               <div
@@ -706,9 +758,9 @@ export const FuelPage: React.FC = () => {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
-                        {formatDate(item.data)}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
+                        {fullBadge}
                       </span>
                       <span
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider ${
@@ -723,7 +775,7 @@ export const FuelPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1.5">
+                    <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1.5 font-mono">
                       {formatCurrency(item.valor_total_abastecido)}
                     </div>
                   </div>

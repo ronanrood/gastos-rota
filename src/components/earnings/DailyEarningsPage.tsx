@@ -22,9 +22,18 @@ import {
   Eye,
   EyeOff,
   Pencil,
+  RotateCcw,
 } from 'lucide-react';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
 import { EditEarningModal } from './EditEarningModal';
+import { HistoryFilterBar } from '../filters/HistoryFilterBar';
+import { EarningsFilterSummary } from '../filters/EarningsFilterSummary';
+import {
+  type HistoryFilterState,
+  getDefaultFilterState,
+  calculateFilterDateRange,
+  formatCardDateBadge,
+} from '../../utils/filterUtils';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -41,7 +50,7 @@ const formatDate = (dateStr: string): string => {
 };
 
 export const DailyEarningsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // Formulário - inicialização pura
   const [data, setData] = useState<string>(() => new Date().toISOString().split('T')[0]);
@@ -55,6 +64,7 @@ export const DailyEarningsPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
   const [earningsList, setEarningsList] = useState<DailyEarning[]>([]);
+  const [filterState, setFilterState] = useState<HistoryFilterState>(getDefaultFilterState);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -106,6 +116,67 @@ export const DailyEarningsPage: React.FC = () => {
     }
     return 0;
   }, [totalBrutoEstimado, numKm]);
+
+  // Filtragem e Ordenação avançada dos lançamentos
+  const filteredEarningsList = useMemo(() => {
+    const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
+    const q = filterState.searchQuery.trim().toLowerCase();
+
+    return earningsList
+      .filter((item) => {
+        // Filtro por Data
+        if (startDate && item.data < startDate) return false;
+        if (endDate && item.data > endDate) return false;
+
+        // Filtro por Busca Instantânea (observação, data, peças, bônus, faturamento)
+        if (q) {
+          const obs = (item.observacoes || '').toLowerCase();
+          const dStr = (item.data || '').toLowerCase();
+          const dFormatted = formatDate(item.data).toLowerCase();
+          const pecas = (item.qtd_pecas || '').toString();
+          const bonus = (item.valor_extra_bonus || '').toString();
+          const faturamento = (
+            typeof item.faturamento_bruto === 'number'
+              ? item.faturamento_bruto
+              : item.qtd_pecas * item.valor_unitario_peca + item.valor_extra_bonus
+          ).toFixed(2);
+
+          const matches =
+            obs.includes(q) ||
+            dStr.includes(q) ||
+            dFormatted.includes(q) ||
+            pecas.includes(q) ||
+            bonus.includes(q) ||
+            faturamento.includes(q);
+
+          if (!matches) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const fatA =
+          typeof a.faturamento_bruto === 'number'
+            ? a.faturamento_bruto
+            : a.qtd_pecas * a.valor_unitario_peca + a.valor_extra_bonus;
+        const fatB =
+          typeof b.faturamento_bruto === 'number'
+            ? b.faturamento_bruto
+            : b.qtd_pecas * b.valor_unitario_peca + b.valor_extra_bonus;
+
+        if (filterState.sortBy === 'oldest') {
+          return (a.data || '').localeCompare(b.data || '') || (a.created_at || '').localeCompare(b.created_at || '');
+        }
+        if (filterState.sortBy === 'highest_value') {
+          return fatB - fatA;
+        }
+        if (filterState.sortBy === 'lowest_value') {
+          return fatA - fatB;
+        }
+        // padrão: 'recent'
+        return (b.data || '').localeCompare(a.data || '') || (b.created_at || '').localeCompare(a.created_at || '');
+      });
+  }, [earningsList, filterState, profile]);
 
   // Carregar lançamentos sob demanda (ex: ao clicar em recarregar ou após inserção)
   const refreshEarnings = useCallback(async () => {
@@ -361,6 +432,7 @@ export const DailyEarningsPage: React.FC = () => {
       {/* CARDS DE RECEBIMENTOS (FECHAMENTO DE QUINZENA/MÊS) */}
       <PaymentCyclesCards
         earnings={earningsList}
+        referenceMonth={filterState.monthYear}
         title="Meus Recebimentos (Fechamento de Quinzena)"
       />
 
@@ -688,6 +760,22 @@ export const DailyEarningsPage: React.FC = () => {
         {/* Conteúdo exibido apenas quando NÃO recolhido */}
         {!isHistoryCollapsed && (
           <>
+            {/* BARRA DE FILTRAGEM AVANÇADA (MÊS, QUINZENA, BUSCA E ORDENAÇÃO) */}
+            <HistoryFilterBar
+              filterState={filterState}
+              onFilterChange={setFilterState}
+              profile={profile}
+              searchPlaceholder="Buscar por observação, data (ex: 30/10), peças, bônus..."
+              totalFilteredCount={filteredEarningsList.length}
+            />
+
+            {/* RESUMO DO FILTRO ATIVO (TOTALIZADOR DINÂMICO) */}
+            <EarningsFilterSummary
+              items={filteredEarningsList}
+              filterState={filterState}
+              profile={profile}
+            />
+
             {/* Loading Skeleton */}
             {loadingList && earningsList.length === 0 && (
               <div className="space-y-3">
@@ -700,7 +788,7 @@ export const DailyEarningsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Empty State */}
+            {/* Empty State Sem Registros Totais */}
             {!loadingList && earningsList.length === 0 && (
               <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center">
                 <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
@@ -713,9 +801,32 @@ export const DailyEarningsPage: React.FC = () => {
               </div>
             )}
 
+            {/* Empty State do Filtro (quando há dados gerais mas nada no filtro selecionado) */}
+            {!loadingList && earningsList.length > 0 && filteredEarningsList.length === 0 && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                  <Info className="w-6 h-6 text-amber-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Nenhum lançamento encontrado neste período</h4>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                    Não há registros para o mês ou filtros aplicados. Alterne o mês, selecione outro chip ou limpe os filtros.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFilterState(getDefaultFilterState())}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[40px] rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold transition active:scale-95 cursor-pointer border border-slate-700"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Limpar Filtros e Ver Todos
+                </button>
+              </div>
+            )}
+
             {/* Lista de Registros */}
             <div className="space-y-3">
-              {earningsList.map((item) => {
+              {filteredEarningsList.map((item) => {
                 const faturamento =
                   typeof item.faturamento_bruto === 'number'
                     ? item.faturamento_bruto
@@ -724,6 +835,7 @@ export const DailyEarningsPage: React.FC = () => {
                 const rendimentoKm = item.km_rodado > 0 ? faturamento / item.km_rodado : 0;
                 const isConfirming = confirmDeleteId === item.id;
                 const isDeleting = deletingId === item.id;
+                const { fullBadge } = formatCardDateBadge(item.data, profile);
 
                 return (
                   <div
@@ -733,9 +845,9 @@ export const DailyEarningsPage: React.FC = () => {
                     <div className="flex items-start justify-between gap-3">
                       {/* Informações da Data e Faturamento */}
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
-                            {formatDate(item.data)}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
+                            {fullBadge}
                           </span>
                           {item.valor_extra_bonus > 0 && (
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
@@ -744,7 +856,7 @@ export const DailyEarningsPage: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1.5">
+                        <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1.5 font-mono">
                           {formatCurrency(faturamento)}
                         </div>
                       </div>

@@ -27,8 +27,12 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
-
-type PeriodFilter = 'today' | '7days' | 'month' | 'all';
+import { HistoryFilterBar } from '../filters/HistoryFilterBar';
+import {
+  type HistoryFilterState,
+  getDefaultFilterState,
+  calculateFilterDateRange,
+} from '../../utils/filterUtils';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -44,35 +48,9 @@ const formatDateShort = (dateStr: string): string => {
   return `${parts[2]}/${parts[1]}`;
 };
 
-const getDateRange = (period: PeriodFilter): { startDate: string | null; endDate: string | null } => {
-  const now = new Date();
-  const formatYMD = (d: Date) => d.toISOString().split('T')[0];
-
-  if (period === 'today') {
-    const todayStr = formatYMD(now);
-    return { startDate: todayStr, endDate: todayStr };
-  }
-
-  if (period === '7days') {
-    const past = new Date();
-    past.setDate(past.getDate() - 6);
-    return { startDate: formatYMD(past), endDate: formatYMD(now) };
-  }
-
-  if (period === 'month') {
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const firstDay = new Date(y, m, 1);
-    const lastDay = new Date(y, m + 1, 0);
-    return { startDate: formatYMD(firstDay), endDate: formatYMD(lastDay) };
-  }
-
-  return { startDate: null, endDate: null };
-};
-
 export const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
-  const [period, setPeriod] = useState<PeriodFilter>('month');
+  const { user, profile } = useAuth();
+  const [filterState, setFilterState] = useState<HistoryFilterState>(getDefaultFilterState);
   const [loading, setLoading] = useState(true);
 
   // Dados brutos
@@ -86,7 +64,7 @@ export const DashboardPage: React.FC = () => {
       if (!user) return;
       if (showLoading) setLoading(true);
 
-      const { startDate, endDate } = getDateRange(period);
+      const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
 
       try {
         let eQuery = supabase.from('daily_earnings').select('*').eq('user_id', user.id);
@@ -119,7 +97,7 @@ export const DashboardPage: React.FC = () => {
         setLoading(false);
       }
     },
-    [user, period]
+    [user, filterState, profile]
   );
 
   useEffect(() => {
@@ -130,7 +108,7 @@ export const DashboardPage: React.FC = () => {
         setLoading(false);
         return;
       }
-      const { startDate, endDate } = getDateRange(period);
+      const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
 
       try {
         let eQuery = supabase.from('daily_earnings').select('*').eq('user_id', user.id);
@@ -171,7 +149,7 @@ export const DashboardPage: React.FC = () => {
     return () => {
       ignore = true;
     };
-  }, [user, period]);
+  }, [user, filterState, profile]);
 
   // Cálculos consolidados dos 4 Cards Principais
   // a) Faturamento Bruto
@@ -324,17 +302,10 @@ export const DashboardPage: React.FC = () => {
     return list;
   }, [despesasCombustivel, despesasOficina]);
 
-  const periodButtons: { id: PeriodFilter; label: string }[] = [
-    { id: 'today', label: 'Hoje' },
-    { id: '7days', label: 'Últimos 7 dias' },
-    { id: 'month', label: 'Este Mês' },
-    { id: 'all', label: 'Todo o Período' },
-  ];
-
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Top Header: Título e Filtro de Período */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Top Header: Título e Atualização */}
+      <div className="flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400">
@@ -349,34 +320,24 @@ export const DashboardPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Filtro de Período */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto max-w-full">
-          {periodButtons.map((btn) => (
-            <button
-              key={btn.id}
-              type="button"
-              onClick={() => setPeriod(btn.id)}
-              className={`h-10 min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all active:scale-[0.96] cursor-pointer ${
-                period === btn.id
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              {btn.label}
-            </button>
-          ))}
-
-          <button
-            type="button"
-            onClick={() => fetchData(true)}
-            disabled={loading}
-            title="Atualizar dados"
-            className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition active:scale-[0.95] cursor-pointer"
-          >
-            <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => fetchData(true)}
+          disabled={loading}
+          title="Atualizar dados"
+          className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition active:scale-[0.95] cursor-pointer"
+        >
+          <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
+
+      {/* NAVEGADOR DE MÊS/ANO E CHIPS DE QUINZENA/PERÍODO */}
+      <HistoryFilterBar
+        filterState={filterState}
+        onFilterChange={setFilterState}
+        profile={profile}
+        hideSearchAndSort={true}
+      />
 
       {/* 4 CARDS PRINCIPAIS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
@@ -517,6 +478,7 @@ export const DashboardPage: React.FC = () => {
       {/* CARDS DE FECHAMENTO DE RECEBIMENTOS */}
       <PaymentCyclesCards
         earnings={earnings}
+        referenceMonth={filterState.monthYear}
         title="Fechamento de Pagamentos por Ciclo"
       />
 

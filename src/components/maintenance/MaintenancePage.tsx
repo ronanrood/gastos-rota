@@ -21,8 +21,18 @@ import {
   X,
   Pencil,
   ClipboardList,
+  RotateCcw,
+  Info,
 } from 'lucide-react';
 import { EditMaintenanceModal } from './EditMaintenanceModal';
+import { HistoryFilterBar } from '../filters/HistoryFilterBar';
+import { MaintenanceFilterSummary } from '../filters/MaintenanceFilterSummary';
+import {
+  type HistoryFilterState,
+  getDefaultFilterState,
+  calculateFilterDateRange,
+  formatCardDateBadge,
+} from '../../utils/filterUtils';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -41,7 +51,7 @@ const formatDate = (dateStr: string): string => {
 const getTodayString = (): string => new Date().toISOString().split('T')[0];
 
 export const MaintenancePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // Estados do formulário
   const [today] = useState<string>(getTodayString);
@@ -59,6 +69,7 @@ export const MaintenancePage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
+  const [filterState, setFilterState] = useState<HistoryFilterState>(getDefaultFilterState);
   const [statusFilter, setStatusFilter] = useState<'all' | 'realizado' | 'orcamento'>('all');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -79,21 +90,92 @@ export const MaintenancePage: React.FC = () => {
     }, 4000);
   };
 
+  // Contagem no período selecionado (mês / quinzena / custom)
+  const dateFilteredLogs = useMemo(() => {
+    const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
+    return maintenanceLogs.filter((item) => {
+      if (startDate && item.data < startDate) return false;
+      if (endDate && item.data > endDate) return false;
+      return true;
+    });
+  }, [maintenanceLogs, filterState, profile]);
+
   const orcamentosCount = useMemo(
-    () => maintenanceLogs.filter((m) => m.status === 'orcamento').length,
-    [maintenanceLogs]
+    () => dateFilteredLogs.filter((m) => m.status === 'orcamento').length,
+    [dateFilteredLogs]
   );
 
   const realizadosCount = useMemo(
-    () => maintenanceLogs.filter((m) => m.status !== 'orcamento').length,
-    [maintenanceLogs]
+    () => dateFilteredLogs.filter((m) => m.status !== 'orcamento').length,
+    [dateFilteredLogs]
   );
 
+  // Filtragem e Ordenação avançada da Oficina
   const filteredLogs = useMemo(() => {
-    if (statusFilter === 'all') return maintenanceLogs;
-    if (statusFilter === 'orcamento') return maintenanceLogs.filter((m) => m.status === 'orcamento');
-    return maintenanceLogs.filter((m) => m.status !== 'orcamento');
-  }, [maintenanceLogs, statusFilter]);
+    const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
+    const q = filterState.searchQuery.trim().toLowerCase();
+
+    return maintenanceLogs
+      .filter((item) => {
+        // Filtro por Data
+        if (startDate && item.data < startDate) return false;
+        if (endDate && item.data > endDate) return false;
+
+        // Filtro por Status da Oficina (Pills)
+        if (statusFilter === 'orcamento' && item.status !== 'orcamento') return false;
+        if (statusFilter === 'realizado' && item.status === 'orcamento') return false;
+
+        // Filtro por Busca Instantânea (nome da oficina, descrição, status, garantia, valores, data)
+        if (q) {
+          const oficina = (item.oficina_nome || '').toLowerCase();
+          const desc = (item.descricao_servico || '').toLowerCase();
+          const dStr = (item.data || '').toLowerCase();
+          const dFormatted = formatDate(item.data).toLowerCase();
+          const statusText = item.status === 'orcamento' ? 'orcamento orçamento pendente' : 'realizado concluido concluído';
+          const isGarantiaAtiva = item.garantia_ate && item.garantia_ate >= today ? 'garantia na garantia' : '';
+          const valorTotal = (
+            typeof item.valor_total === 'number'
+              ? item.valor_total
+              : (item.valor_pecas || 0) + (item.valor_mao_de_obra || 0)
+          ).toFixed(2);
+
+          const matches =
+            oficina.includes(q) ||
+            desc.includes(q) ||
+            dStr.includes(q) ||
+            dFormatted.includes(q) ||
+            statusText.includes(q) ||
+            isGarantiaAtiva.includes(q) ||
+            valorTotal.includes(q);
+
+          if (!matches) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const valA =
+          typeof a.valor_total === 'number'
+            ? a.valor_total
+            : (a.valor_pecas || 0) + (a.valor_mao_de_obra || 0);
+        const valB =
+          typeof b.valor_total === 'number'
+            ? b.valor_total
+            : (b.valor_pecas || 0) + (b.valor_mao_de_obra || 0);
+
+        if (filterState.sortBy === 'oldest') {
+          return (a.data || '').localeCompare(b.data || '') || (a.created_at || '').localeCompare(b.created_at || '');
+        }
+        if (filterState.sortBy === 'highest_value') {
+          return valB - valA;
+        }
+        if (filterState.sortBy === 'lowest_value') {
+          return valA - valB;
+        }
+        // padrão: 'recent'
+        return (b.data || '').localeCompare(a.data || '') || (b.created_at || '').localeCompare(a.created_at || '');
+      });
+  }, [maintenanceLogs, filterState, profile, statusFilter, today]);
 
   // Cálculo em tempo real do Valor Total (Peças + Mão de Obra)
   const numValorPecas = parseFloat(valorPecas) || 0;
@@ -772,6 +854,22 @@ export const MaintenancePage: React.FC = () => {
           </button>
         </div>
 
+        {/* BARRA DE FILTRAGEM AVANÇADA (MÊS, QUINZENA, BUSCA E ORDENAÇÃO) */}
+        <HistoryFilterBar
+          filterState={filterState}
+          onFilterChange={setFilterState}
+          profile={profile}
+          searchPlaceholder="Buscar por oficina, serviço (óleo, pneu), status..."
+          totalFilteredCount={filteredLogs.length}
+        />
+
+        {/* RESUMO DO FILTRO ATIVO (TOTALIZADOR DINÂMICO) */}
+        <MaintenanceFilterSummary
+          items={filteredLogs}
+          filterState={filterState}
+          profile={profile}
+        />
+
         {/* Filtros Rápidos: Todos vs Serviços Realizados vs Orçamentos Pendentes */}
         <div className="flex flex-wrap items-center gap-2 pt-1 px-1">
           <button
@@ -783,7 +881,7 @@ export const MaintenancePage: React.FC = () => {
                 : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
             }`}
           >
-            Todos ({maintenanceLogs.length})
+            Todos ({dateFilteredLogs.length})
           </button>
 
           <button
@@ -836,28 +934,42 @@ export const MaintenancePage: React.FC = () => {
           </div>
         )}
 
-        {/* Empty State */}
-        {!loadingList && filteredLogs.length === 0 && (
+        {/* Empty State Sem Registros Totais */}
+        {!loadingList && maintenanceLogs.length === 0 && (
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center">
             <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
-              {statusFilter === 'orcamento' ? (
-                <ClipboardList className="w-6 h-6 text-amber-400" />
-              ) : (
-                <Wrench className="w-6 h-6 text-blue-400" />
-              )}
+              <Wrench className="w-6 h-6 text-blue-400" />
             </div>
-            <h4 className="text-sm font-bold text-white">
-              {statusFilter === 'orcamento'
-                ? 'Nenhum orçamento pendente'
-                : statusFilter === 'realizado'
-                ? 'Nenhum serviço realizado cadastrado'
-                : 'Nenhum registro encontrado'}
-            </h4>
+            <h4 className="text-sm font-bold text-white">Nenhum registro encontrado</h4>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              {statusFilter === 'orcamento'
-                ? 'Você não possui orçamentos aguardando aprovação no momento.'
-                : 'Utilize o formulário acima para registrar manutenções, peças e notas fiscais.'}
+              Utilize o formulário acima para registrar manutenções, peças e notas fiscais.
             </p>
+          </div>
+        )}
+
+        {/* Empty State com Filtro Ativo */}
+        {!loadingList && maintenanceLogs.length > 0 && filteredLogs.length === 0 && (
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+              <Info className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Nenhum lançamento encontrado neste período</h4>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                Não foram encontrados serviços ou orçamentos para o mês ou termos de busca selecionados.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterState(getDefaultFilterState());
+                setStatusFilter('all');
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[40px] rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-bold transition active:scale-95 cursor-pointer border border-slate-700"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Limpar Filtros e Ver Todos
+            </button>
           </div>
         )}
 
@@ -875,6 +987,7 @@ export const MaintenancePage: React.FC = () => {
 
             const isConfirming = confirmDeleteId === item.id;
             const isDeleting = deletingId === item.id;
+            const { fullBadge } = formatCardDateBadge(item.data, profile);
 
             return (
               <div
@@ -888,8 +1001,8 @@ export const MaintenancePage: React.FC = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono">
-                        {formatDate(item.data)}
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
+                        {fullBadge}
                       </span>
                       <span className="text-xs font-bold text-white truncate max-w-[180px] sm:max-w-xs">
                         {item.oficina_nome}
