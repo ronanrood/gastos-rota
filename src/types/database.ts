@@ -131,6 +131,8 @@ export interface FuelLogUpdate {
   // NOTE: litros_calculados is GENERATED ALWAYS in PostgreSQL. NEVER send it on update!
 }
 
+export type MaintenanceStatus = 'orcamento' | 'realizado';
+
 export interface MaintenanceLog {
   id: string;
   user_id: string;
@@ -142,6 +144,7 @@ export interface MaintenanceLog {
   valor_total: number;
   garantia_ate: string | null;
   comprovante_url: string | null;
+  status?: MaintenanceStatus | null;
   created_at?: string;
 }
 
@@ -154,6 +157,7 @@ export interface MaintenanceLogInsert {
   valor_mao_de_obra: number;
   garantia_ate?: string | null;
   comprovante_url?: string | null;
+  status?: MaintenanceStatus | null;
   // NOTE: valor_total is GENERATED ALWAYS in PostgreSQL. Do NOT send it!
 }
 
@@ -165,5 +169,6 @@ export interface MaintenanceLogUpdate {
   valor_mao_de_obra?: number;
   garantia_ate?: string | null;
   comprovante_url?: string | null;
+  status?: MaintenanceStatus | null;
   // NOTE: valor_total is GENERATED ALWAYS in PostgreSQL. NEVER send it on update!
 }

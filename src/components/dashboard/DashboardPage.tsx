@@ -24,6 +24,7 @@ import {
   PieChart as PieIcon,
   BarChart3,
   Sparkles,
+  ClipboardList,
 } from 'lucide-react';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
 
@@ -184,20 +185,39 @@ export const DashboardPage: React.FC = () => {
     }, 0);
   }, [earnings]);
 
-  // b) Despesas Totais
-  const despesasCombustivel = useMemo(() => {
-    return fuelLogs.reduce((acc, curr) => acc + (curr.valor_total_abastecido || 0), 0);
-  }, [fuelLogs]);
+  // Filtra manutenções: SOMENTE 'realizado' entra nas despesas oficiais e abatimento do lucro
+  const maintenanceRealizados = useMemo(() => {
+    return maintenanceLogs.filter((m) => m.status !== 'orcamento');
+  }, [maintenanceLogs]);
 
-  const despesasOficina = useMemo(() => {
-    return maintenanceLogs.reduce((acc, curr) => {
+  const orcamentosPendentes = useMemo(() => {
+    return maintenanceLogs.filter((m) => m.status === 'orcamento');
+  }, [maintenanceLogs]);
+
+  const totalOrcamentosPendentes = useMemo(() => {
+    return orcamentosPendentes.reduce((acc, curr) => {
       const valor =
         typeof curr.valor_total === 'number'
           ? curr.valor_total
           : curr.valor_pecas + curr.valor_mao_de_obra;
       return acc + valor;
     }, 0);
-  }, [maintenanceLogs]);
+  }, [orcamentosPendentes]);
+
+  // b) Despesas Totais
+  const despesasCombustivel = useMemo(() => {
+    return fuelLogs.reduce((acc, curr) => acc + (curr.valor_total_abastecido || 0), 0);
+  }, [fuelLogs]);
+
+  const despesasOficina = useMemo(() => {
+    return maintenanceRealizados.reduce((acc, curr) => {
+      const valor =
+        typeof curr.valor_total === 'number'
+          ? curr.valor_total
+          : curr.valor_pecas + curr.valor_mao_de_obra;
+      return acc + valor;
+    }, 0);
+  }, [maintenanceRealizados]);
 
   const despesasTotais = useMemo(() => {
     return despesasCombustivel + despesasOficina;
@@ -258,8 +278,8 @@ export const DashboardPage: React.FC = () => {
       map.set(d, { ...prev, despesas: prev.despesas + (f.valor_total_abastecido || 0) });
     });
 
-    // Soma oficina por data
-    maintenanceLogs.forEach((m) => {
+    // Soma oficina realizada por data (orçamentos pendentes NÃO entram nas despesas do gráfico)
+    maintenanceRealizados.forEach((m) => {
       const d = m.data;
       if (!d) return;
       const prev = map.get(d) || { faturamento: 0, despesas: 0 };
@@ -282,7 +302,7 @@ export const DashboardPage: React.FC = () => {
         lucro: Number((item.faturamento - item.despesas).toFixed(2)),
       };
     });
-  }, [earnings, fuelLogs, maintenanceLogs]);
+  }, [earnings, fuelLogs, maintenanceRealizados]);
 
   // Dados para o Gráfico de Rosca (Proporção de Despesas)
   const donutData = useMemo(() => {
@@ -296,7 +316,7 @@ export const DashboardPage: React.FC = () => {
     }
     if (despesasOficina > 0) {
       list.push({
-        name: 'Oficina & Peças',
+        name: 'Oficina (Serviços Realizados)',
         value: Number(despesasOficina.toFixed(2)),
         color: '#3b82f6', // blue-500
       });
@@ -467,6 +487,32 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* AVISO INFORMATIVO: ORÇAMENTOS PENDENTES (Não abatem do Lucro Líquido) */}
+      {orcamentosPendentes.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-slate-900 border border-amber-500/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+              <ClipboardList className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">
+                Você possui <span className="text-amber-400 font-mono">{formatCurrency(totalOrcamentosPendentes)}</span> em {orcamentosPendentes.length} {orcamentosPendentes.length === 1 ? 'orçamento pendente' : 'orçamentos pendentes'}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Esses orçamentos aguardam aprovação e não abatem das Despesas Totais nem do Lucro Líquido Real.
+              </p>
+            </div>
+          </div>
+          <a
+            href="#manutencao"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 active:bg-amber-500/40 text-amber-300 font-bold text-xs transition active:scale-[0.98] self-start sm:self-center shrink-0 border border-amber-500/30 cursor-pointer"
+          >
+            <span>Ver Orçamentos</span>
+            <span>→</span>
+          </a>
+        </div>
+      )}
 
       {/* CARDS DE FECHAMENTO DE RECEBIMENTOS */}
       <PaymentCyclesCards

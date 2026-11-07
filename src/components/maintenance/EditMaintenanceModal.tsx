@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import type { MaintenanceLog, MaintenanceLogUpdate } from '../../types/database';
+import type { MaintenanceLog, MaintenanceLogUpdate, MaintenanceStatus } from '../../types/database';
 import {
   X,
   Pencil,
@@ -14,6 +14,9 @@ import {
   ShieldCheck,
   Paperclip,
   Trash2,
+  CheckCircle2,
+  Wrench,
+  ClipboardList,
 } from 'lucide-react';
 
 interface EditMaintenanceModalProps {
@@ -21,6 +24,7 @@ interface EditMaintenanceModalProps {
   onClose: () => void;
   maintenanceLog: MaintenanceLog;
   userId: string;
+  mode?: 'edit' | 'approve';
   onSuccess: (updated: MaintenanceLog) => void;
 }
 
@@ -31,17 +35,27 @@ const formatCurrency = (val: number): string => {
   }).format(val || 0);
 };
 
+const TODAY_STR = new Date().toISOString().split('T')[0];
+
 export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
   isOpen,
   onClose,
   maintenanceLog,
   userId,
+  mode = 'edit',
   onSuccess,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Inicialização pura do estado
-  const [data, setData] = useState<string>(() => maintenanceLog.data || '');
+  // Se o modo for 'approve', o status já inicia como 'realizado' e a data pode ser sugerida como hoje
+  const [status, setStatus] = useState<MaintenanceStatus>(() => {
+    if (mode === 'approve') return 'realizado';
+    return maintenanceLog.status || 'realizado';
+  });
+  const [data, setData] = useState<string>(() => {
+    if (mode === 'approve') return TODAY_STR;
+    return maintenanceLog.data || '';
+  });
   const [oficinaNome, setOficinaNome] = useState<string>(() => maintenanceLog.oficina_nome || '');
   const [descricaoServico, setDescricaoServico] = useState<string>(() => maintenanceLog.descricao_servico || '');
   const [valorPecas, setValorPecas] = useState<string>(() => maintenanceLog.valor_pecas?.toString() || '0');
@@ -158,7 +172,7 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
         finalComprovanteUrl = publicUrlData.publicUrl;
       }
 
-      setUploadStatus('Salvando alterações...');
+      setUploadStatus(mode === 'approve' ? 'Aprovando serviço...' : 'Salvando alterações...');
 
       /**
        * REGRA CRÍTICA DO SUPABASE:
@@ -173,6 +187,7 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
         valor_mao_de_obra: Number(numValorMaoDeObra.toFixed(2)),
         garantia_ate: garantiaAte ? garantiaAte : null,
         comprovante_url: finalComprovanteUrl,
+        status,
       };
 
       const { data: updated, error } = await supabase
@@ -198,6 +213,8 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
     }
   };
 
+  const isRealizado = status === 'realizado';
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
       <div
@@ -209,15 +226,23 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
-              <Pencil className="w-5 h-5" />
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                mode === 'approve' || isRealizado
+                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                  : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
+              }`}
+            >
+              {mode === 'approve' ? <CheckCircle2 className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
             </div>
             <div>
               <h3 id="modal-edit-maintenance-title" className="text-base sm:text-lg font-bold text-white leading-tight">
-                Editar Manutenção / Orçamento
+                {mode === 'approve' ? 'Aprovar e Concluir Serviço' : 'Editar Registro de Oficina'}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Altere peças, mão de obra, garantia ou anexe a nota fiscal
+                {mode === 'approve'
+                  ? 'Confirme a data de conclusão, valores negociados e anexe a nota final'
+                  : 'Altere peças, mão de obra, status, garantia ou anexe a nota fiscal'}
               </p>
             </div>
           </div>
@@ -232,12 +257,54 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
           </button>
         </div>
 
+        {/* Seletor de Tipo (Segmented Control) */}
+        <div className="mt-4">
+          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            Classificação do Registro
+          </label>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setStatus('realizado')}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer ${
+                status === 'realizado'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Wrench className="w-4 h-4" />
+              <span>Serviço Realizado</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatus('orcamento')}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer ${
+                status === 'orcamento'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4" />
+              <span>Orçamento Pendente</span>
+            </button>
+          </div>
+        </div>
+
         {/* Visor em tempo real do Total */}
-        <div className="mt-4 p-4 rounded-2xl bg-slate-950/80 border border-blue-500/30 flex items-center justify-between gap-3">
+        <div
+          className={`mt-4 p-4 rounded-2xl bg-slate-950/80 border flex items-center justify-between gap-3 ${
+            isRealizado ? 'border-blue-500/30' : 'border-amber-500/30'
+          }`}
+        >
           <div>
-            <span className="text-[10px] font-semibold tracking-wider text-blue-400 uppercase flex items-center gap-1">
+            <span
+              className={`text-[10px] font-semibold tracking-wider uppercase flex items-center gap-1 ${
+                isRealizado ? 'text-blue-400' : 'text-amber-400'
+              }`}
+            >
               <Sparkles className="w-3.5 h-3.5" />
-              Novo Valor Total (Peças + M.O.)
+              {isRealizado ? 'Valor Total do Serviço' : 'Valor Total do Orçamento'}
             </span>
             <div className="text-2xl sm:text-3xl font-black text-white mt-0.5 font-mono">
               {formatCurrency(valorTotalEstimado)}
@@ -262,9 +329,20 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Data */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Data do Serviço
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-slate-300">
+                  {isRealizado ? 'Data do Serviço Concluído' : 'Data do Orçamento'}
+                </label>
+                {data !== TODAY_STR && (
+                  <button
+                    type="button"
+                    onClick={() => setData(TODAY_STR)}
+                    className="text-[10px] text-blue-400 hover:text-blue-300 underline cursor-pointer"
+                  >
+                    Usar Hoje
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Calendar className="w-4 h-4" />
@@ -364,14 +442,14 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
             {/* Descrição do Serviço */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Descrição do Serviço Executado
+                {isRealizado ? 'Descrição do Serviço Executado' : 'Descrição dos Itens do Orçamento'}
               </label>
               <textarea
                 required
                 rows={2}
                 value={descricaoServico}
                 onChange={(e) => setDescricaoServico(e.target.value)}
-                placeholder="Ex: Troca de pastilhas de freio e alinhamento"
+                placeholder="Ex: Troca de pastilhas de freio, disco e alinhamento"
                 className="w-full p-3 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
               />
             </div>
@@ -382,7 +460,7 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
                 <Paperclip className="w-4 h-4 text-blue-400" />
-                Comprovante / Nota Fiscal
+                {isRealizado ? 'Nota Fiscal / Comprovante Final' : 'Foto / PDF do Orçamento'}
               </span>
               {existingComprovanteUrl && !removeExistingFile && (
                 <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
@@ -434,7 +512,9 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
               <label className="block text-[11px] text-slate-400 mb-1.5">
                 {existingComprovanteUrl && !removeExistingFile
                   ? 'Ou selecione um novo arquivo para substituir:'
-                  : 'Selecione uma imagem ou PDF da nota fiscal (máx 10MB):'}
+                  : isRealizado
+                  ? 'Selecione a nota fiscal ou comprovante (máx 10MB):'
+                  : 'Selecione a foto ou PDF do orçamento (máx 10MB):'}
               </label>
               <input
                 ref={fileInputRef}
@@ -465,12 +545,21 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 min-h-[44px] rounded-xl text-xs sm:text-sm font-bold bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition active:scale-[0.98] cursor-pointer flex items-center gap-2 disabled:opacity-50"
+              className={`px-5 py-2.5 min-h-[44px] rounded-xl text-xs sm:text-sm font-bold shadow-md transition active:scale-[0.98] cursor-pointer flex items-center gap-2 disabled:opacity-50 ${
+                mode === 'approve' || isRealizado
+                  ? 'bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 shadow-emerald-500/20'
+                  : 'bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 shadow-amber-500/20'
+              }`}
             >
               {submitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
                   {uploadStatus || 'Salvando...'}
+                </>
+              ) : mode === 'approve' ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 stroke-[2.2]" />
+                  Aprovar e Concluir Serviço
                 </>
               ) : (
                 'Salvar Alterações'

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { MaintenanceLog, MaintenanceLogInsert } from '../../types/database';
+import type { MaintenanceLog, MaintenanceLogInsert, MaintenanceStatus } from '../../types/database';
 import {
   Wrench,
   Calendar,
@@ -20,6 +20,7 @@ import {
   Paperclip,
   X,
   Pencil,
+  ClipboardList,
 } from 'lucide-react';
 import { EditMaintenanceModal } from './EditMaintenanceModal';
 
@@ -44,6 +45,7 @@ export const MaintenancePage: React.FC = () => {
 
   // Estados do formulário
   const [today] = useState<string>(getTodayString);
+  const [status, setStatus] = useState<MaintenanceStatus>('realizado');
   const [data, setData] = useState<string>(getTodayString);
   const [oficinaNome, setOficinaNome] = useState('');
   const [descricaoServico, setDescricaoServico] = useState('');
@@ -57,19 +59,41 @@ export const MaintenancePage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'realizado' | 'orcamento'>('all');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingMaintenanceLog, setEditingMaintenanceLog] = useState<MaintenanceLog | null>(null);
+  const [modalMode, setModalMode] = useState<'edit' | 'approve'>('edit');
 
   const handleEditSuccess = (updated: MaintenanceLog) => {
     setMaintenanceLogs((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-    setFormSuccess('Manutenção atualizada com sucesso!');
+    setFormSuccess(
+      updated.status === 'orcamento'
+        ? 'Orçamento atualizado com sucesso!'
+        : 'Serviço atualizado com sucesso!'
+    );
     setTimeout(() => {
       setFormSuccess(null);
     }, 4000);
   };
+
+  const orcamentosCount = useMemo(
+    () => maintenanceLogs.filter((m) => m.status === 'orcamento').length,
+    [maintenanceLogs]
+  );
+
+  const realizadosCount = useMemo(
+    () => maintenanceLogs.filter((m) => m.status !== 'orcamento').length,
+    [maintenanceLogs]
+  );
+
+  const filteredLogs = useMemo(() => {
+    if (statusFilter === 'all') return maintenanceLogs;
+    if (statusFilter === 'orcamento') return maintenanceLogs.filter((m) => m.status === 'orcamento');
+    return maintenanceLogs.filter((m) => m.status !== 'orcamento');
+  }, [maintenanceLogs, statusFilter]);
 
   // Cálculo em tempo real do Valor Total (Peças + Mão de Obra)
   const numValorPecas = parseFloat(valorPecas) || 0;
@@ -251,6 +275,7 @@ export const MaintenancePage: React.FC = () => {
         valor_mao_de_obra: Number(numValorMaoDeObra.toFixed(2)),
         garantia_ate: garantiaAte ? garantiaAte : null,
         comprovante_url: comprovanteUrl,
+        status,
       };
 
       const { data: inserted, error: insertError } = await supabase
@@ -263,7 +288,11 @@ export const MaintenancePage: React.FC = () => {
         throw insertError;
       }
 
-      setFormSuccess('Manutenção registrada com sucesso!');
+      setFormSuccess(
+        status === 'orcamento'
+          ? 'Orçamento pendente registrado com sucesso!'
+          : 'Serviço realizado registrado com sucesso!'
+      );
 
       if (inserted) {
         setMaintenanceLogs((prev) => [inserted as MaintenanceLog, ...prev]);
@@ -272,6 +301,7 @@ export const MaintenancePage: React.FC = () => {
       }
 
       // Limpa os campos
+      setStatus('realizado');
       setOficinaNome('');
       setDescricaoServico('');
       setValorPecas('0');
@@ -442,13 +472,55 @@ export const MaintenancePage: React.FC = () => {
           </div>
         )}
 
+        {/* SELETOR VISUAL: TIPO DE REGISTRO (Serviço Realizado vs Orçamento Pendente) */}
+        <div className="mb-5">
+          <label className="block text-xs font-semibold text-slate-300 mb-2">
+            Tipo de Lançamento
+          </label>
+          <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-950/80 rounded-2xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setStatus('realizado')}
+              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] ${
+                status === 'realizado'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+            >
+              <Wrench className="w-4 h-4 stroke-[2.2]" />
+              <span>🛠️ Serviço Realizado</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatus('orcamento')}
+              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] ${
+                status === 'orcamento'
+                  ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30 font-black'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4 stroke-[2.2]" />
+              <span>📋 Orçamento Pendente</span>
+            </button>
+          </div>
+        </div>
+
         {/* VISOR EM TEMPO REAL: VALOR TOTAL */}
-        <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-950 to-slate-900 border-2 border-blue-500/40 p-4 sm:p-5 relative shadow-inner">
+        <div
+          className={`mb-6 rounded-2xl bg-gradient-to-br from-slate-950 to-slate-900 border-2 p-4 sm:p-5 relative shadow-inner transition-colors ${
+            status === 'realizado' ? 'border-blue-500/40' : 'border-amber-500/40'
+          }`}
+        >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-400">
-                <DollarSign className="w-4 h-4" />
-                Valor Total do Serviço
+              <div
+                className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${
+                  status === 'realizado' ? 'text-blue-400' : 'text-amber-400'
+                }`}
+              >
+                {status === 'realizado' ? <Wrench className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
+                {status === 'realizado' ? 'Valor Total do Serviço' : 'Valor Total do Orçamento'}
               </div>
               <div className="text-3xl sm:text-4xl font-black text-white mt-1 tracking-tight font-mono">
                 {formatCurrency(valorTotalEstimado)}
@@ -473,7 +545,7 @@ export const MaintenancePage: React.FC = () => {
             {/* Data */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Data do Serviço
+                {status === 'realizado' ? 'Data do Serviço' : 'Data do Orçamento'}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -556,7 +628,7 @@ export const MaintenancePage: React.FC = () => {
             {/* Garantia Até */}
             <div className="sm:col-span-2 lg:col-span-4">
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Garantia Válida Até 
+                Garantia Válida Até (Opcional)
               </label>
               <div className="relative max-w-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -575,7 +647,9 @@ export const MaintenancePage: React.FC = () => {
           {/* Descrição do Serviço */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Descrição do Serviço Realizado 
+              {status === 'realizado'
+                ? 'Descrição do Serviço Realizado'
+                : 'Descrição do Orçamento / Itens a Realizar'}
             </label>
             <div className="relative">
               <textarea
@@ -583,7 +657,11 @@ export const MaintenancePage: React.FC = () => {
                 rows={2}
                 value={descricaoServico}
                 onChange={(e) => setDescricaoServico(e.target.value)}
-                placeholder="Ex: Troca de correia dentada, tensor, óleo do motor 5W30 e filtro de ar"
+                placeholder={
+                  status === 'realizado'
+                    ? 'Ex: Troca de correia dentada, óleo do motor e pastilhas de freio'
+                    : 'Ex: Cotação para troca de amortecedores dianteiros e alinhamento'
+                }
                 className="w-full px-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
@@ -592,17 +670,21 @@ export const MaintenancePage: React.FC = () => {
           {/* Upload de Comprovante (Storage comprovantes_oficina) */}
           <div className="pt-2">
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Anexo / Nota Fiscal / Comprovante (PDF, JPG ou PNG)
+              {status === 'realizado'
+                ? 'Nota Fiscal / Comprovante Final (PDF, JPG ou PNG)'
+                : 'Foto / PDF do Orçamento (PDF, JPG ou PNG)'}
             </label>
 
             {!selectedFile ? (
               <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-700 hover:border-blue-500/70 rounded-2xl bg-slate-950/50 hover:bg-slate-950 cursor-pointer transition active:scale-[0.99] group">
                 <Upload className="w-6 h-6 text-slate-400 group-hover:text-blue-400 mb-2 transition" />
                 <span className="text-xs font-semibold text-slate-300 group-hover:text-white">
-                  Clique ou arraste o comprovante aqui
+                  {status === 'realizado'
+                    ? 'Clique ou arraste a nota fiscal aqui'
+                    : 'Clique ou arraste a foto do orçamento aqui'}
                 </span>
                 <span className="text-[11px] text-slate-400 mt-0.5">
-                  Salvo automaticamente no bucket `comprovantes_oficina`
+                  Salvo com segurança no Supabase Storage
                 </span>
                 <input
                   type="file"
@@ -640,17 +722,26 @@ export const MaintenancePage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full h-12 min-h-[48px] px-4 bg-blue-500 hover:bg-blue-400 active:bg-blue-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className={`w-full h-12 min-h-[48px] px-4 font-bold text-sm sm:text-base rounded-2xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                status === 'realizado'
+                  ? 'bg-blue-500 hover:bg-blue-400 active:bg-blue-600 text-slate-950 shadow-blue-500/25'
+                  : 'bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 shadow-amber-500/25 font-black'
+              }`}
             >
               {submitting ? (
                 <>
                   <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                  {uploadProgress || 'Salvando Manutenção...'}
+                  {uploadProgress || 'Salvando...'}
+                </>
+              ) : status === 'realizado' ? (
+                <>
+                  <Wrench className="w-5 h-5 stroke-[2.2]" />
+                  Salvar Serviço Realizado
                 </>
               ) : (
                 <>
-                  <Wrench className="w-5 h-5 stroke-[2.2]" />
-                  Salvar Manutenção
+                  <ClipboardList className="w-5 h-5 stroke-[2.2]" />
+                  Salvar Orçamento Pendente
                 </>
               )}
             </button>
@@ -658,15 +749,15 @@ export const MaintenancePage: React.FC = () => {
         </form>
       </section>
 
-      {/* HISTÓRICO DE MANUTENÇÕES */}
+      {/* HISTÓRICO DE MANUTENÇÕES E ORÇAMENTOS */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between px-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
           <div>
             <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-              Histórico de Manutenções
+              Histórico da Oficina e Orçamentos
             </h3>
             <p className="text-xs text-slate-400">
-              Serviços efetuados, garantias e comprovantes
+              Serviços executados, orçamentos, garantias e comprovantes
             </p>
           </div>
 
@@ -675,9 +766,61 @@ export const MaintenancePage: React.FC = () => {
             onClick={refreshMaintenanceLogs}
             disabled={loadingList}
             title="Atualizar lista"
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="self-end sm:self-center p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
           >
             <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {/* Filtros Rápidos: Todos vs Serviços Realizados vs Orçamentos Pendentes */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 px-1">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition cursor-pointer active:scale-[0.97] ${
+              statusFilter === 'all'
+                ? 'bg-slate-100 text-slate-950 border-white font-bold shadow-sm'
+                : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            Todos ({maintenanceLogs.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter('realizado')}
+            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition cursor-pointer active:scale-[0.97] flex items-center gap-1.5 ${
+              statusFilter === 'realizado'
+                ? 'bg-blue-600 text-white border-blue-500 font-bold shadow-md shadow-blue-600/30'
+                : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span>Serviços Realizados ({realizadosCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter('orcamento')}
+            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition cursor-pointer active:scale-[0.97] flex items-center gap-1.5 ${
+              statusFilter === 'orcamento'
+                ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-md shadow-amber-500/30'
+                : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <ClipboardList className="w-3.5 h-3.5" />
+            <span>Orçamentos Pendentes</span>
+            {orcamentosCount > 0 && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  statusFilter === 'orcamento'
+                    ? 'bg-slate-950 text-amber-300'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}
+              >
+                {orcamentosCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -694,28 +837,41 @@ export const MaintenancePage: React.FC = () => {
         )}
 
         {/* Empty State */}
-        {!loadingList && maintenanceLogs.length === 0 && (
+        {!loadingList && filteredLogs.length === 0 && (
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center">
             <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
-              <Wrench className="w-6 h-6" />
+              {statusFilter === 'orcamento' ? (
+                <ClipboardList className="w-6 h-6 text-amber-400" />
+              ) : (
+                <Wrench className="w-6 h-6 text-blue-400" />
+              )}
             </div>
-            <h4 className="text-sm font-bold text-white">Nenhuma manutenção registrada</h4>
+            <h4 className="text-sm font-bold text-white">
+              {statusFilter === 'orcamento'
+                ? 'Nenhum orçamento pendente'
+                : statusFilter === 'realizado'
+                ? 'Nenhum serviço realizado cadastrado'
+                : 'Nenhum registro encontrado'}
+            </h4>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              Utilize o formulário acima para registrar trocas de óleo, revisões de freios e anexar notas fiscais.
+              {statusFilter === 'orcamento'
+                ? 'Você não possui orçamentos aguardando aprovação no momento.'
+                : 'Utilize o formulário acima para registrar manutenções, peças e notas fiscais.'}
             </p>
           </div>
         )}
 
         {/* Lista de Registros */}
         <div className="space-y-3">
-          {maintenanceLogs.map((item) => {
+          {filteredLogs.map((item) => {
             const total =
               typeof item.valor_total === 'number'
                 ? item.valor_total
                 : item.valor_pecas + item.valor_mao_de_obra;
 
-            const isWarrantyActive = item.garantia_ate && item.garantia_ate >= today;
-            const hasWarrantyExpired = item.garantia_ate && item.garantia_ate < today;
+            const isOrcamento = item.status === 'orcamento';
+            const isWarrantyActive = !isOrcamento && item.garantia_ate && item.garantia_ate >= today;
+            const hasWarrantyExpired = !isOrcamento && item.garantia_ate && item.garantia_ate < today;
 
             const isConfirming = confirmDeleteId === item.id;
             const isDeleting = deletingId === item.id;
@@ -723,7 +879,11 @@ export const MaintenancePage: React.FC = () => {
             return (
               <div
                 key={item.id}
-                className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition shadow-sm"
+                className={`bg-slate-900 border rounded-2xl p-4 sm:p-5 transition shadow-sm ${
+                  isOrcamento
+                    ? 'border-amber-500/40 hover:border-amber-500/60'
+                    : 'border-slate-800/80 hover:border-slate-700/80'
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -735,7 +895,20 @@ export const MaintenancePage: React.FC = () => {
                         {item.oficina_nome}
                       </span>
 
-                      {/* Badge de Garantia */}
+                      {/* Badge de Status: Orçamento Pendente vs Serviço Concluído */}
+                      {isOrcamento ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                          <ClipboardList className="w-3 h-3" />
+                          Orçamento Pendente
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                          <Wrench className="w-3 h-3" />
+                          Serviço Concluído
+                        </span>
+                      )}
+
+                      {/* Badge de Garantia (apenas para serviços realizados) */}
                       {isWarrantyActive && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                           <ShieldCheck className="w-3 h-3" />
@@ -751,7 +924,11 @@ export const MaintenancePage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="text-xl sm:text-2xl font-black text-blue-400 mt-1.5 font-mono">
+                    <div
+                      className={`text-xl sm:text-2xl font-black mt-1.5 font-mono ${
+                        isOrcamento ? 'text-amber-400' : 'text-blue-400'
+                      }`}
+                    >
                       {formatCurrency(total)}
                     </div>
                   </div>
@@ -764,11 +941,13 @@ export const MaintenancePage: React.FC = () => {
                         href={item.comprovante_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Ver Comprovante / Nota Fiscal"
+                        title={isOrcamento ? 'Ver Orçamento Anexado' : 'Ver Nota Fiscal / Comprovante'}
                         className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-semibold transition active:scale-[0.96]"
                       >
                         <FileText className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Comprovante</span>
+                        <span className="hidden sm:inline">
+                          {isOrcamento ? 'Anexo' : 'Comprovante'}
+                        </span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
@@ -777,9 +956,12 @@ export const MaintenancePage: React.FC = () => {
                     {!isConfirming && (
                       <button
                         type="button"
-                        onClick={() => setEditingMaintenanceLog(item)}
-                        aria-label="Editar manutenção"
-                        title="Editar esta manutenção"
+                        onClick={() => {
+                          setModalMode('edit');
+                          setEditingMaintenanceLog(item);
+                        }}
+                        aria-label="Editar registro"
+                        title="Editar este registro"
                         className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
                       >
                         <Pencil className="w-4 h-4" />
@@ -813,7 +995,7 @@ export const MaintenancePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteId(item.id)}
-                        aria-label="Excluir manutenção"
+                        aria-label="Excluir registro"
                         title="Excluir este registro"
                         className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
                       >
@@ -837,19 +1019,35 @@ export const MaintenancePage: React.FC = () => {
                     Mão de Obra: <strong className="text-slate-200">{formatCurrency(item.valor_mao_de_obra)}</strong>
                   </span>
                 </div>
+
+                {/* BOTÃO RÁPIDO: APROVAR E CONVERTER ORÇAMENTO EM SERVIÇO REALIZADO */}
+                {isOrcamento && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalMode('approve');
+                      setEditingMaintenanceLog(item);
+                    }}
+                    className="w-full mt-3.5 py-3 px-4 min-h-[44px] rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:from-emerald-600 active:to-teal-600 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-lg shadow-emerald-500/25 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4 stroke-[2.8]" />
+                    <span>Aprovar e Concluir Serviço</span>
+                  </button>
+                )}
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* Modal Responsivo de Edição de Manutenção / Orçamento */}
+      {/* Modal Responsivo de Edição / Aprovação de Manutenção */}
       {editingMaintenanceLog && user && (
         <EditMaintenanceModal
-          key={editingMaintenanceLog.id}
+          key={`${editingMaintenanceLog.id}-${modalMode}`}
           isOpen={!!editingMaintenanceLog}
           maintenanceLog={editingMaintenanceLog}
           userId={user.id}
+          mode={modalMode}
           onClose={() => setEditingMaintenanceLog(null)}
           onSuccess={handleEditSuccess}
         />
