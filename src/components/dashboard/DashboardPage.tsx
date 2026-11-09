@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { DailyEarning, FuelLog, MaintenanceLog } from '../../types/database';
+import type { DailyEarning, FuelLog, MaintenanceLog, Vehicle } from '../../types/database';
 import {
   ResponsiveContainer,
   BarChart,
@@ -28,6 +28,9 @@ import {
 } from 'lucide-react';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
+import { FilterShareActions } from '../export/FilterShareActions';
+import { ReportPrintModal } from '../export/ReportPrintModal';
+import { generateWhatsAppDashboardText } from '../../utils/exportUtils';
 import {
   type HistoryFilterState,
   getDefaultFilterState,
@@ -57,6 +60,8 @@ export const DashboardPage: React.FC = () => {
   const [earnings, setEarnings] = useState<DailyEarning[]>([]);
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Carregamento dos dados com base no período selecionado
   const fetchData = useCallback(
@@ -126,16 +131,18 @@ export const DashboardPage: React.FC = () => {
           mQuery = mQuery.lte('data', endDate);
         }
 
-        const [eRes, fRes, mRes] = await Promise.all([
+        const [eRes, fRes, mRes, vRes] = await Promise.all([
           eQuery.order('data', { ascending: true }),
           fQuery.order('data', { ascending: true }),
           mQuery.order('data', { ascending: true }),
+          supabase.from('vehicles').select('*').eq('user_id', user.id).maybeSingle(),
         ]);
 
         if (!ignore) {
           if (eRes.data) setEarnings(eRes.data as DailyEarning[]);
           if (fRes.data) setFuelLogs(fRes.data as FuelLog[]);
           if (mRes.data) setMaintenanceLogs(mRes.data as MaintenanceLog[]);
+          if (vRes.data) setVehicle(vRes.data as Vehicle);
         }
       } catch (err) {
         if (!ignore) console.error('Erro ao carregar dados do dashboard:', err);
@@ -150,6 +157,8 @@ export const DashboardPage: React.FC = () => {
       ignore = true;
     };
   }, [user, filterState, profile]);
+
+  const { periodLabel, paymentNotice } = calculateFilterDateRange(filterState, profile);
 
   // Cálculos consolidados dos 4 Cards Principais
   // a) Faturamento Bruto
@@ -338,6 +347,50 @@ export const DashboardPage: React.FC = () => {
         profile={profile}
         hideSearchAndSort={true}
       />
+
+      {/* RESUMO DO FILTRO ATIVO E AÇÕES DE EXPORTAÇÃO */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-2 border-emerald-500/40 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden backdrop-blur-md">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-800">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                Resumo do Fechamento • {periodLabel}
+              </h4>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {earnings.length} {earnings.length === 1 ? 'dia de produção' : 'dias de produção'} • {fuelLogs.length} abastecimentos • {maintenanceRealizados.length} manutenções concluídas
+            </p>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold shrink-0">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Lucro Líquido: {formatCurrency(lucroLiquidoReal)}</span>
+          </div>
+        </div>
+
+        {/* Ações de Compartilhamento e Exportação */}
+        <FilterShareActions
+          getWhatsAppText={() =>
+            generateWhatsAppDashboardText({
+              profile,
+              periodLabel,
+              faturamentoBruto,
+              despesasCombustivel,
+              despesasOficina,
+              despesasTotais,
+              lucroLiquidoReal,
+              totalKmRodados,
+              diasProducao: earnings.length,
+              vehicle,
+            })
+          }
+          onOpenPdfModal={() => setIsPdfModalOpen(true)}
+          accentColor="emerald"
+        />
+      </div>
 
       {/* 4 CARDS PRINCIPAIS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
@@ -659,6 +712,28 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Modal de Pré-visualização e Impressão do Relatório */}
+      <ReportPrintModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        reportType="dashboard"
+        profile={profile}
+        vehicle={vehicle}
+        periodLabel={periodLabel}
+        paymentNotice={paymentNotice}
+        dashboardData={{
+          faturamentoBruto,
+          despesasCombustivel,
+          despesasOficina,
+          despesasTotais,
+          lucroLiquidoReal,
+          totalKmRodados,
+          diasProducao: earnings.length,
+          margemLucro,
+          dailyData: dailyBarData,
+        }}
+      />
     </div>
   );
 };

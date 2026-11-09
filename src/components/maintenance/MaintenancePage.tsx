@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { MaintenanceLog, MaintenanceLogInsert, MaintenanceStatus } from '../../types/database';
+import type { MaintenanceLog, MaintenanceLogInsert, MaintenanceStatus, Vehicle } from '../../types/database';
 import {
   Wrench,
   Calendar,
@@ -69,6 +69,7 @@ export const MaintenancePage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [filterState, setFilterState] = useState<HistoryFilterState>(getDefaultFilterState);
   const [statusFilter, setStatusFilter] = useState<'all' | 'realizado' | 'orcamento'>('all');
   const [formError, setFormError] = useState<string | null>(null);
@@ -222,18 +223,28 @@ export const MaintenancePage: React.FC = () => {
         return;
       }
       try {
-        const { data: rows, error } = await supabase
-          .from('maintenance_logs')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('data', { ascending: false })
-          .order('created_at', { ascending: false });
+        const [logsRes, vehicleRes] = await Promise.all([
+          supabase
+            .from('maintenance_logs')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('data', { ascending: false })
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('vehicles')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle(),
+        ]);
 
         if (!ignore) {
-          if (error) {
-            console.error('Erro ao carregar manutenções:', error.message);
-          } else if (rows) {
-            setMaintenanceLogs(rows as MaintenanceLog[]);
+          if (logsRes.error) {
+            console.error('Erro ao carregar manutenções:', logsRes.error.message);
+          } else if (logsRes.data) {
+            setMaintenanceLogs(logsRes.data as MaintenanceLog[]);
+          }
+          if (vehicleRes.data) {
+            setVehicle(vehicleRes.data as Vehicle);
           }
         }
       } catch (err) {
@@ -868,6 +879,7 @@ export const MaintenancePage: React.FC = () => {
           items={filteredLogs}
           filterState={filterState}
           profile={profile}
+          vehicle={vehicle}
         />
 
         {/* Filtros Rápidos: Todos vs Serviços Realizados vs Orçamentos Pendentes */}

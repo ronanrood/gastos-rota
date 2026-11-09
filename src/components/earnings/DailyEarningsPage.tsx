@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { DailyEarning } from '../../types/database';
+import type { DailyEarning, Vehicle } from '../../types/database';
 import {
   Calendar,
   Package,
@@ -64,6 +64,7 @@ export const DailyEarningsPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
   const [earningsList, setEarningsList] = useState<DailyEarning[]>([]);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [filterState, setFilterState] = useState<HistoryFilterState>(getDefaultFilterState);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -212,18 +213,28 @@ export const DailyEarningsPage: React.FC = () => {
         return;
       }
       try {
-        const { data: rows, error } = await supabase
-          .from('daily_earnings')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('data', { ascending: false })
-          .order('created_at', { ascending: false });
+        const [earningsRes, vehicleRes] = await Promise.all([
+          supabase
+            .from('daily_earnings')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('data', { ascending: false })
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('vehicles')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle(),
+        ]);
 
         if (!ignore) {
-          if (error) {
-            console.error('Erro ao carregar ganhos:', error.message);
-          } else if (rows) {
-            setEarningsList(rows as DailyEarning[]);
+          if (earningsRes.error) {
+            console.error('Erro ao carregar ganhos:', earningsRes.error.message);
+          } else if (earningsRes.data) {
+            setEarningsList(earningsRes.data as DailyEarning[]);
+          }
+          if (vehicleRes.data) {
+            setVehicle(vehicleRes.data as Vehicle);
           }
         }
       } catch (err) {
@@ -774,6 +785,7 @@ export const DailyEarningsPage: React.FC = () => {
               items={filteredEarningsList}
               filterState={filterState}
               profile={profile}
+              vehicle={vehicle}
             />
 
             {/* Loading Skeleton */}

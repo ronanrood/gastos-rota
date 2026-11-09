@@ -689,6 +689,7 @@ export const FuelPage: React.FC = () => {
           items={filteredLogs}
           filterState={filterState}
           profile={profile}
+          vehicle={vehicle}
         />
 
         {/* Loading Skeleton */}
