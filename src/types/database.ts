@@ -132,6 +132,7 @@ export interface FuelLogUpdate {
 }
 
 export type MaintenanceStatus = 'orcamento' | 'realizado';
+export type PaymentMethod = 'avista' | 'parcelado';
 
 export interface MaintenanceLog {
   id: string;
@@ -145,6 +146,10 @@ export interface MaintenanceLog {
   garantia_ate: string | null;
   comprovante_url: string | null;
   status?: MaintenanceStatus | null;
+  forma_pagamento?: PaymentMethod | null;
+  qtd_parcelas?: number | null;
+  valor_parcela?: number | null;
+  mes_primeira_parcela?: string | null;
   created_at?: string;
 }
 
@@ -158,6 +163,10 @@ export interface MaintenanceLogInsert {
   garantia_ate?: string | null;
   comprovante_url?: string | null;
   status?: MaintenanceStatus | null;
+  forma_pagamento?: PaymentMethod | null;
+  qtd_parcelas?: number | null;
+  valor_parcela?: number | null;
+  mes_primeira_parcela?: string | null;
   // NOTE: valor_total is GENERATED ALWAYS in PostgreSQL. Do NOT send it!
 }
 
@@ -170,5 +179,43 @@ export interface MaintenanceLogUpdate {
   garantia_ate?: string | null;
   comprovante_url?: string | null;
   status?: MaintenanceStatus | null;
+  forma_pagamento?: PaymentMethod | null;
+  qtd_parcelas?: number | null;
+  valor_parcela?: number | null;
+  mes_primeira_parcela?: string | null;
   // NOTE: valor_total is GENERATED ALWAYS in PostgreSQL. NEVER send it on update!
 }
+
+export type PaymentCycleStatus = 'pendente' | 'pago' | 'atrasado';
+
+export interface PaymentCycleRecord {
+  id: string;
+  user_id: string;
+  referencia_chave: string;
+  periodo_inicio: string;
+  periodo_fim: string;
+  data_pagamento_prevista: string;
+  valor_calculado: number;
+  valor_recebido: number | null;
+  status: PaymentCycleStatus;
+  data_confirmacao: string | null;
+  comprovante_url?: string | null;
+  observacoes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PaymentCycleUpsert {
+  user_id: string;
+  referencia_chave: string;
+  periodo_inicio: string;
+  periodo_fim: string;
+  data_pagamento_prevista: string;
+  valor_calculado: number;
+  valor_recebido: number | null;
+  status: PaymentCycleStatus;
+  data_confirmacao: string | null;
+  comprovante_url?: string | null;
+  observacoes?: string | null;
+}
+

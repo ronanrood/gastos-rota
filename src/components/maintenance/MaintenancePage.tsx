@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { MaintenanceLog, MaintenanceLogInsert, MaintenanceStatus, Vehicle } from '../../types/database';
+import type { MaintenanceLog, MaintenanceLogInsert, MaintenanceStatus, PaymentMethod, Vehicle } from '../../types/database';
 import {
   Wrench,
   Calendar,
@@ -23,6 +23,7 @@ import {
   ClipboardList,
   RotateCcw,
   Info,
+  CreditCard,
 } from 'lucide-react';
 import { EditMaintenanceModal } from './EditMaintenanceModal';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
@@ -33,6 +34,11 @@ import {
   calculateFilterDateRange,
   formatCardDateBadge,
 } from '../../utils/filterUtils';
+import {
+  isServiceParcelado,
+  calculateMaintenanceInstallmentInfo,
+  calculatePeriodMaintenanceExpenses,
+} from '../../utils/maintenanceInstallments';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -62,6 +68,10 @@ export const MaintenancePage: React.FC = () => {
   const [valorPecas, setValorPecas] = useState<string>('0');
   const [valorMaoDeObra, setValorMaoDeObra] = useState<string>('0');
   const [garantiaAte, setGarantiaAte] = useState<string>('');
+  const [formaPagamento, setFormaPagamento] = useState<PaymentMethod>('avista');
+  const [qtdParcelas, setQtdParcelas] = useState<string>('2');
+  const [valorParcela, setValorParcela] = useState<string>('');
+  const [mesPrimeiraParcela, setMesPrimeiraParcela] = useState<string>(getTodayString);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Estados de controle e listagem
@@ -71,7 +81,7 @@ export const MaintenancePage: React.FC = () => {
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [filterState, setFilterState] = useState<HistoryFilterState>(getDefaultFilterState);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'realizado' | 'orcamento'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'realizado' | 'orcamento' | 'parcelado'>('all');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -111,6 +121,11 @@ export const MaintenancePage: React.FC = () => {
     [dateFilteredLogs]
   );
 
+  const parceladosCount = useMemo(
+    () => maintenanceLogs.filter((m) => isServiceParcelado(m)).length,
+    [maintenanceLogs]
+  );
+
   // Filtragem e Ordenação avançada da Oficina
   const filteredLogs = useMemo(() => {
     const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
@@ -118,13 +133,17 @@ export const MaintenancePage: React.FC = () => {
 
     return maintenanceLogs
       .filter((item) => {
-        // Filtro por Data
-        if (startDate && item.data < startDate) return false;
-        if (endDate && item.data > endDate) return false;
+        // Filtro por Data (quando não estamos visualizando a aba exclusiva de parcelamentos,
+        // pois serviços parcelados ativos no mês podem ter sido realizados em meses anteriores)
+        if (statusFilter !== 'parcelado') {
+          if (startDate && item.data < startDate) return false;
+          if (endDate && item.data > endDate) return false;
+        }
 
         // Filtro por Status da Oficina (Pills)
         if (statusFilter === 'orcamento' && item.status !== 'orcamento') return false;
         if (statusFilter === 'realizado' && item.status === 'orcamento') return false;
+        if (statusFilter === 'parcelado' && !isServiceParcelado(item)) return false;
 
         // Filtro por Busca Instantânea (nome da oficina, descrição, status, garantia, valores, data)
         if (q) {
@@ -132,7 +151,9 @@ export const MaintenancePage: React.FC = () => {
           const desc = (item.descricao_servico || '').toLowerCase();
           const dStr = (item.data || '').toLowerCase();
           const dFormatted = formatDate(item.data).toLowerCase();
-          const statusText = item.status === 'orcamento' ? 'orcamento orçamento pendente' : 'realizado concluido concluído';
+          const statusText =
+            (item.status === 'orcamento' ? 'orcamento orçamento pendente' : 'realizado concluido concluído') +
+            (isServiceParcelado(item) ? ' parcelado parcela parcelas cartão boleto' : ' avista à vista');
           const isGarantiaAtiva = item.garantia_ate && item.garantia_ate >= today ? 'garantia na garantia' : '';
           const valorTotal = (
             typeof item.valor_total === 'number'
@@ -185,6 +206,46 @@ export const MaintenancePage: React.FC = () => {
   const valorTotalEstimado = useMemo(() => {
     return numValorPecas + numValorMaoDeObra;
   }, [numValorPecas, numValorMaoDeObra]);
+
+  const handlePecasChange = (val: string) => {
+    setValorPecas(val);
+    if (formaPagamento === 'parcelado') {
+      const total = (parseFloat(val) || 0) + numValorMaoDeObra;
+      const q = parseInt(qtdParcelas, 10) || 1;
+      setValorParcela((total / q).toFixed(2));
+    }
+  };
+
+  const handleMaoDeObraChange = (val: string) => {
+    setValorMaoDeObra(val);
+    if (formaPagamento === 'parcelado') {
+      const total = numValorPecas + (parseFloat(val) || 0);
+      const q = parseInt(qtdParcelas, 10) || 1;
+      setValorParcela((total / q).toFixed(2));
+    }
+  };
+
+  // Resumo de comprometimento mensal com parcelas ativas no período filtrado
+  const parcelamentoResumo = useMemo(() => {
+    const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
+    const expenses = calculatePeriodMaintenanceExpenses(maintenanceLogs, {
+      monthYear: filterState.periodChip === 'month' ? filterState.monthYear : undefined,
+      startDate,
+      endDate,
+    });
+
+    const activeParcelados = maintenanceLogs.filter((m) => isServiceParcelado(m));
+    const totalFuturo = activeParcelados.reduce((acc, curr) => {
+      const info = calculateMaintenanceInstallmentInfo(curr, filterState.monthYear);
+      return acc + (info.isFinished ? 0 : info.remainingValue);
+    }, 0);
+
+    return {
+      comprometimentoMensal: expenses.parcelasTotal,
+      activeCount: expenses.activeInstallmentsCount,
+      totalRestanteFuturo: totalFuturo,
+    };
+  }, [maintenanceLogs, filterState, profile]);
 
   // Recarregar sob demanda (ex: ao clicar no botão de atualizar ou após salvar)
   const refreshMaintenanceLogs = useCallback(async () => {
@@ -359,6 +420,10 @@ export const MaintenancePage: React.FC = () => {
        * NÃO envie a coluna 'valor_total' no payload JSON,
        * pois ela é calculada automaticamente pelo PostgreSQL (GENERATED ALWAYS AS (valor_pecas + valor_mao_de_obra) STORED).
        */
+      const parsedQtd = parseInt(qtdParcelas, 10) || 1;
+      const parsedValParc =
+        parseFloat(valorParcela.replace(',', '.')) || valorTotalEstimado / parsedQtd;
+
       const payload: MaintenanceLogInsert = {
         user_id: user.id,
         data,
@@ -369,6 +434,10 @@ export const MaintenancePage: React.FC = () => {
         garantia_ate: garantiaAte ? garantiaAte : null,
         comprovante_url: comprovanteUrl,
         status,
+        forma_pagamento: formaPagamento,
+        qtd_parcelas: formaPagamento === 'parcelado' ? parsedQtd : 1,
+        valor_parcela: formaPagamento === 'parcelado' ? Number(parsedValParc.toFixed(2)) : null,
+        mes_primeira_parcela: formaPagamento === 'parcelado' ? (mesPrimeiraParcela || data) : null,
       };
 
       const { data: inserted, error: insertError } = await supabase
@@ -400,6 +469,10 @@ export const MaintenancePage: React.FC = () => {
       setValorPecas('0');
       setValorMaoDeObra('0');
       setGarantiaAte('');
+      setFormaPagamento('avista');
+      setQtdParcelas('2');
+      setValorParcela('');
+      setMesPrimeiraParcela(getTodayString());
       setSelectedFile(null);
 
       setTimeout(() => {
@@ -689,7 +762,7 @@ export const MaintenancePage: React.FC = () => {
                   min="0"
                   step="0.01"
                   value={valorPecas}
-                  onChange={(e) => setValorPecas(e.target.value)}
+                  onChange={(e) => handlePecasChange(e.target.value)}
                   placeholder="0.00"
                   className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition font-mono"
                 />
@@ -711,7 +784,7 @@ export const MaintenancePage: React.FC = () => {
                   min="0"
                   step="0.01"
                   value={valorMaoDeObra}
-                  onChange={(e) => setValorMaoDeObra(e.target.value)}
+                  onChange={(e) => handleMaoDeObraChange(e.target.value)}
                   placeholder="0.00"
                   className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition font-mono"
                 />
@@ -734,6 +807,124 @@ export const MaintenancePage: React.FC = () => {
                   className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 />
               </div>
+            </div>
+
+            {/* SELETOR DE FORMA DE PAGAMENTO */}
+            <div className="sm:col-span-2 lg:col-span-4 p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-200 mb-2 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-blue-400" />
+                  Forma de Pagamento
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormaPagamento('avista')}
+                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] ${
+                      formaPagamento === 'avista'
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                        : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                    }`}
+                  >
+                    <span>💵 À Vista (PIX / Débito / Dinheiro)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormaPagamento('parcelado');
+                      const q = parseInt(qtdParcelas, 10) || 2;
+                      setValorParcela((valorTotalEstimado / q).toFixed(2));
+                    }}
+                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] ${
+                      formaPagamento === 'parcelado'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                        : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                    }`}
+                  >
+                    <span>💳 Parcelado (Cartão / Boleto)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* CAMPOS QUANDO PARCELADO */}
+              {formaPagamento === 'parcelado' && (
+                <div className="pt-3 border-t border-slate-800 space-y-3 animate-in fade-in duration-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Quantidade de Parcelas */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                        Quantidade de Parcelas
+                      </label>
+                      <select
+                        value={qtdParcelas}
+                        onChange={(e) => {
+                          const q = e.target.value;
+                          setQtdParcelas(q);
+                          const numQ = parseInt(q, 10) || 1;
+                          setValorParcela((valorTotalEstimado / numQ).toFixed(2));
+                        }}
+                        className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                      >
+                        {Array.from({ length: 23 }, (_, i) => i + 2).map((num) => (
+                          <option key={num} value={num}>
+                            {num}x parcelas
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Valor de Cada Parcela */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                        <span>Valor da Parcela (R$)</span>
+                        <span className="text-[10px] text-slate-400">Editável se tiver juros</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-bold">
+                          R$
+                        </span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min="0"
+                          value={valorParcela}
+                          onChange={(e) => setValorParcela(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-emerald-400 font-mono font-bold text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Mês/Data da 1ª Parcela */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                        Data / Mês da 1ª Parcela
+                      </label>
+                      <input
+                        type="date"
+                        value={mesPrimeiraParcela}
+                        onChange={(e) => setMesPrimeiraParcela(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Resumo do Parcelamento */}
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>
+                        Total do Serviço: <strong>{formatCurrency(valorTotalEstimado)}</strong> →{' '}
+                        <strong>{qtdParcelas}x de {formatCurrency(parseFloat(valorParcela) || 0)}</strong>
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                      Impacto mensal no caixa: {formatCurrency(parseFloat(valorParcela) || 0)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -932,7 +1123,67 @@ export const MaintenancePage: React.FC = () => {
               </span>
             )}
           </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter('parcelado')}
+            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition cursor-pointer active:scale-[0.97] flex items-center gap-1.5 ${
+              statusFilter === 'parcelado'
+                ? 'bg-blue-600 text-white border-blue-500 font-bold shadow-md shadow-blue-600/30'
+                : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>💳 Serviços Parcelados</span>
+            {parceladosCount > 0 && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  statusFilter === 'parcelado'
+                    ? 'bg-slate-950 text-blue-300'
+                    : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                }`}
+              >
+                {parceladosCount}
+              </span>
+            )}
+          </button>
         </div>
+
+        {/* CARD RESUMO EXCLUSIVO DA ABA PARCELADOS */}
+        {statusFilter === 'parcelado' && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-950/40 via-slate-900 to-slate-950 border border-blue-500/30 shadow-lg space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                    Comprometimento Mensal com Oficina neste Mês
+                  </h4>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-white font-mono mt-1">
+                  {formatCurrency(parcelamentoResumo.comprometimentoMensal)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {parcelamentoResumo.activeCount === 0
+                    ? 'Nenhuma parcela vencendo no período selecionado'
+                    : `${parcelamentoResumo.activeCount} ${parcelamentoResumo.activeCount === 1 ? 'parcela ativa impactando o caixa' : 'parcelas ativas impactando o caixa'}`}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-left sm:text-right shrink-0">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block tracking-wider">
+                  Total Restante a Pagar em Parcelas Futuras:
+                </span>
+                <span className="text-base sm:text-lg font-black text-amber-400 font-mono block mt-0.5">
+                  {formatCurrency(parcelamentoResumo.totalRestanteFuturo)}
+                </span>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
+              💡 Os serviços parcelados têm o custo diluído mês a mês no caixa do app, evitando que você tome um &quot;falso prejuízo&quot; no mês em que o conserto foi feito.
+            </p>
+          </div>
+        )}
 
         {/* Loading Skeleton */}
         {loadingList && maintenanceLogs.length === 0 && (
@@ -996,6 +1247,7 @@ export const MaintenancePage: React.FC = () => {
             const isOrcamento = item.status === 'orcamento';
             const isWarrantyActive = !isOrcamento && item.garantia_ate && item.garantia_ate >= today;
             const hasWarrantyExpired = !isOrcamento && item.garantia_ate && item.garantia_ate < today;
+            const instInfo = calculateMaintenanceInstallmentInfo(item, filterState.monthYear);
 
             const isConfirming = confirmDeleteId === item.id;
             const isDeleting = deletingId === item.id;
@@ -1030,6 +1282,14 @@ export const MaintenancePage: React.FC = () => {
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                           <Wrench className="w-3 h-3" />
                           Serviço Concluído
+                        </span>
+                      )}
+
+                      {/* Badge de Parcelamento */}
+                      {instInfo.isParcelado && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                          <CreditCard className="w-3 h-3 text-blue-400" />
+                          {item.qtd_parcelas}x de {formatCurrency(instInfo.valorParcela)}
                         </span>
                       )}
 
@@ -1144,6 +1404,34 @@ export const MaintenancePage: React.FC = () => {
                     Mão de Obra: <strong className="text-slate-200">{formatCurrency(item.valor_mao_de_obra)}</strong>
                   </span>
                 </div>
+
+                {/* BLOCO DE GESTÃO DE PARCELAS */}
+                {instInfo.isParcelado && (
+                  <div className="mt-3 p-3 sm:p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                      <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                        <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                        <span>{instInfo.badgeLabel}</span>
+                      </span>
+                      <span className="text-[11px] font-mono text-blue-400 font-bold">
+                        {instInfo.progressPercent}% quitado
+                      </span>
+                    </div>
+
+                    {/* Barra de Progresso Visual */}
+                    <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-blue-500 to-emerald-400 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(instInfo.progressPercent, 100)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono pt-0.5 flex-wrap gap-1">
+                      <span>1ª Parcela: {formatDate(instInfo.firstInstallmentDate)}</span>
+                      <span>Impacto mensal no caixa: {formatCurrency(instInfo.valorParcela)}</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* BOTÃO RÁPIDO: APROVAR E CONVERTER ORÇAMENTO EM SERVIÇO REALIZADO */}
                 {isOrcamento && (

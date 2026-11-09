@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Package,
   Gauge,
   Gift,
   TrendingUp,
   CreditCard,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Pencil,
 } from 'lucide-react';
-import type { DailyEarning, Profile, Vehicle } from '../../types/database';
+import { useAuth } from '../../contexts/useAuth';
+import type { DailyEarning, Profile, Vehicle, PaymentCycleRecord } from '../../types/database';
 import { calculateFilterDateRange, type HistoryFilterState } from '../../utils/filterUtils';
+import {
+  computePaymentStatus,
+  calculatePaymentDueDate,
+  getEffectivePaymentConfig,
+  type PaymentCycleInfo,
+} from '../../utils/paymentCycles';
 import { FilterShareActions } from '../export/FilterShareActions';
 import { ReportPrintModal } from '../export/ReportPrintModal';
+import { ConfirmPaymentModal } from '../payment/ConfirmPaymentModal';
 import { generateWhatsAppEarningsText } from '../../utils/exportUtils';
 
 const formatCurrency = (val: number): string => {
@@ -19,11 +31,21 @@ const formatCurrency = (val: number): string => {
   }).format(val || 0);
 };
 
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return dateStr;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
 interface EarningsFilterSummaryProps {
   items: DailyEarning[];
   filterState: HistoryFilterState;
   profile: Profile | null;
   vehicle?: Vehicle | null;
+  paymentRecords?: PaymentCycleRecord[];
+  onPaymentRecordUpdated?: (rec: PaymentCycleRecord) => void;
+  onPaymentRecordReverted?: (refKey: string) => void;
 }
 
 export const EarningsFilterSummary: React.FC<EarningsFilterSummaryProps> = ({
@@ -31,9 +53,18 @@ export const EarningsFilterSummary: React.FC<EarningsFilterSummaryProps> = ({
   filterState,
   profile,
   vehicle,
+  paymentRecords = [],
+  onPaymentRecordUpdated,
+  onPaymentRecordReverted,
 }) => {
+  const { user } = useAuth();
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-  const { periodLabel, paymentNotice } = calculateFilterDateRange(filterState, profile);
+  const [cycleToConfirm, setCycleToConfirm] = useState<PaymentCycleInfo | null>(null);
+
+  const { periodLabel, paymentNotice, startDate, endDate } = calculateFilterDateRange(
+    filterState,
+    profile
+  );
 
   // Cálculos dinâmicos
   const totalFaturamento = items.reduce((acc, curr) => {
@@ -49,14 +80,98 @@ export const EarningsFilterSummary: React.FC<EarningsFilterSummaryProps> = ({
   const totalBonus = items.reduce((acc, curr) => acc + (curr.valor_extra_bonus || 0), 0);
   const uniqueDays = new Set(items.map((i) => i.data)).size;
 
+  // Determina se o filtro atual corresponde a um ciclo de fechamento passível de confirmação
+  const activeCycleInfo: PaymentCycleInfo | null = useMemo(() => {
+    const chip = filterState.periodChip;
+    if (chip !== 'quinzena_1' && chip !== 'quinzena_2' && chip !== 'month') {
+      return null;
+    }
+
+    const config = getEffectivePaymentConfig(profile);
+    const monthYear = filterState.monthYear;
+    const [yStr, mStr] = monthYear.split('-');
+    const lastDayOfMonth = new Date(parseInt(yStr, 10), parseInt(mStr, 10), 0).getDate();
+
+    let id = 'cycle_filter';
+    let cycleName = 'Período Filtrado';
+    let refKey = '';
+    let diaPagamento = config.dia_pagamento_1;
+    let corteInicio = 1;
+    let corteFim = lastDayOfMonth;
+
+    if (chip === 'quinzena_1') {
+      id = 'cycle_q1';
+      cycleName = '1ª Quinzena';
+      refKey = `${monthYear}-Q1`;
+      diaPagamento = config.dia_pagamento_2;
+      corteInicio = config.corte_2_inicio;
+      corteFim = Math.min(config.corte_2_fim, lastDayOfMonth);
+    } else if (chip === 'quinzena_2') {
+      id = 'cycle_q2';
+      cycleName = '2ª Quinzena';
+      refKey = `${monthYear}-Q2`;
+      diaPagamento = config.dia_pagamento_1;
+      corteInicio = config.corte_1_inicio;
+      corteFim = Math.min(config.corte_1_fim, lastDayOfMonth);
+    } else if (chip === 'month') {
+      id = 'cycle_mensal';
+      cycleName = 'Fechamento Mensal';
+      refKey = `${monthYear}-MENSAL`;
+      diaPagamento = config.dia_pagamento_1;
+      corteInicio = 1;
+      corteFim = lastDayOfMonth;
+    }
+
+    const dataPagamentoPrevista = calculatePaymentDueDate(monthYear, corteFim, diaPagamento);
+    const matchedRecord = paymentRecords.find((r) => r.referencia_chave === refKey) || null;
+    const { status, statusLabel } = computePaymentStatus(
+      dataPagamentoPrevista,
+      diaPagamento,
+      matchedRecord
+    );
+
+    return {
+      id,
+      cycleName,
+      referenciaChave: refKey,
+      diaPagamento,
+      corteInicio,
+      corteFim,
+      corteLabel: `Dias ${corteInicio} a ${corteFim}`,
+      periodoInicio: startDate || `${monthYear}-${String(corteInicio).padStart(2, '0')}`,
+      periodoFim: endDate || `${monthYear}-${String(corteFim).padStart(2, '0')}`,
+      dataPagamentoPrevista,
+      entries: items,
+      totalFaturamento,
+      totalPecas,
+      totalKm,
+      isCurrent: false,
+      referenceMonthYear: monthYear,
+      paymentRecord: matchedRecord,
+      status,
+      statusLabel,
+    };
+  }, [
+    filterState.periodChip,
+    filterState.monthYear,
+    profile,
+    paymentRecords,
+    items,
+    startDate,
+    endDate,
+    totalFaturamento,
+    totalPecas,
+    totalKm,
+  ]);
+
   return (
     <>
       <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-2 border-emerald-500/40 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
         {/* Luz de fundo decorativa */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Cabeçalho do Resumo com Lote de Pagamento */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-800">
+        {/* Cabeçalho do Resumo com Lote de Pagamento e Status do Ciclo */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-3 border-b border-slate-800">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -71,12 +186,66 @@ export const EarningsFilterSummary: React.FC<EarningsFilterSummaryProps> = ({
             </p>
           </div>
 
-          {paymentNotice && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold shrink-0">
-              <CreditCard className="w-3.5 h-3.5" />
-              <span>{paymentNotice}</span>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {paymentNotice && !activeCycleInfo && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>{paymentNotice}</span>
+              </div>
+            )}
+
+            {/* Badge de Status de Recebimento da Quinzena Ativa */}
+            {activeCycleInfo && (
+              <div className="flex items-center gap-2">
+                {activeCycleInfo.status === 'pago' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold shadow-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>
+                      Pago / Na Conta{' '}
+                      {activeCycleInfo.paymentRecord?.data_confirmacao && (
+                        <span className="text-slate-300 font-mono text-[11px]">
+                          ({formatDate(activeCycleInfo.paymentRecord.data_confirmacao)})
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                ) : activeCycleInfo.status === 'atrasado' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-bold animate-pulse">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Pagamento Atrasado (Dia {activeCycleInfo.diaPagamento})</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Aguardando Pagamento (Dia {activeCycleInfo.diaPagamento})</span>
+                  </span>
+                )}
+
+                {/* Botão de Ação Rápida */}
+                {activeCycleInfo.status === 'pago' ? (
+                  <button
+                    type="button"
+                    onClick={() => setCycleToConfirm(activeCycleInfo)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 min-h-[36px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-[0.97] cursor-pointer"
+                    title="Editar informações do recebimento"
+                  >
+                    <Pencil className="w-3 h-3 text-emerald-400" />
+                    <span className="hidden sm:inline">Editar</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCycleToConfirm(activeCycleInfo)}
+                    className="inline-flex items-center gap-1 px-3 py-1 min-h-[36px] rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition active:scale-[0.97] cursor-pointer shadow-md shadow-emerald-500/20"
+                    title="Confirmar que o pagamento deste fechamento caiu na conta"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Marcar Recebido</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Totalizador Principal e Submétricas */}
@@ -146,6 +315,26 @@ export const EarningsFilterSummary: React.FC<EarningsFilterSummaryProps> = ({
           accentColor="emerald"
         />
       </div>
+
+      {/* Modal de Confirmação de Recebimento */}
+      {activeCycleInfo && user && (
+        <ConfirmPaymentModal
+          isOpen={Boolean(cycleToConfirm)}
+          onClose={() => setCycleToConfirm(null)}
+          cycle={cycleToConfirm}
+          userId={user.id}
+          onSaveSuccess={(rec) => {
+            if (onPaymentRecordUpdated) {
+              onPaymentRecordUpdated(rec);
+            }
+          }}
+          onRevertSuccess={(ref) => {
+            if (onPaymentRecordReverted) {
+              onPaymentRecordReverted(ref);
+            }
+          }}
+        />
+      )}
 
       {/* Modal de Pré-visualização e Impressão do Relatório */}
       <ReportPrintModal

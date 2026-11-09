@@ -757,7 +757,12 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                                   {item.oficina_nome}
                                 </td>
                                 <td className="py-2 px-3 font-sans text-slate-700">
-                                  {item.descricao_servico}
+                                  <div>{item.descricao_servico}</div>
+                                  {item.forma_pagamento === 'parcelado' && (
+                                    <div className="text-[10px] text-indigo-700 font-semibold font-mono mt-0.5">
+                                      💳 {item.qtd_parcelas || 1}x de {formatCurrency(item.valor_parcela || 0)}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="py-2 px-3 text-center">
                                   <span

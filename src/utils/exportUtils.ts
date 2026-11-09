@@ -274,9 +274,13 @@ export const generateWhatsAppMaintenanceText = (options: {
           ? item.valor_total
           : item.valor_pecas + item.valor_mao_de_obra;
       const statusLabel = item.status === 'orcamento' ? 'ORÇAMENTO' : 'CONCLUÍDO';
+      const parceladoTag =
+        item.forma_pagamento === 'parcelado'
+          ? ` [💳 ${item.qtd_parcelas || 1}x ${formatCurrency(item.valor_parcela || 0)}]`
+          : '';
       const dataFormatada = formatDateShortBR(item.data);
       lines.push(
-        `- ${dataFormatada}: ${item.oficina_nome} | ${item.descricao_servico} | [${statusLabel}] | ${formatCurrency(total)}`
+        `- ${dataFormatada}: ${item.oficina_nome} | ${item.descricao_servico} | [${statusLabel}]${parceladoTag} | ${formatCurrency(total)}`
       );
     });
   }

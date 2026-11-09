@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { DailyEarning, FuelLog, MaintenanceLog, Vehicle } from '../../types/database';
+import type { DailyEarning, FuelLog, MaintenanceLog, Vehicle, PaymentCycleRecord } from '../../types/database';
 import {
   ResponsiveContainer,
   BarChart,
@@ -25,8 +25,10 @@ import {
   BarChart3,
   Sparkles,
   ClipboardList,
+  CreditCard,
 } from 'lucide-react';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
+import { PaymentCyclesHistory } from '../payment/PaymentCyclesHistory';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
 import { FilterShareActions } from '../export/FilterShareActions';
 import { ReportPrintModal } from '../export/ReportPrintModal';
@@ -36,6 +38,11 @@ import {
   getDefaultFilterState,
   calculateFilterDateRange,
 } from '../../utils/filterUtils';
+import {
+  isServiceParcelado,
+  calculatePeriodMaintenanceExpenses,
+  getInstallmentDate,
+} from '../../utils/maintenanceInstallments';
 
 const formatCurrency = (val: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -58,10 +65,34 @@ export const DashboardPage: React.FC = () => {
 
   // Dados brutos
   const [earnings, setEarnings] = useState<DailyEarning[]>([]);
+  const [fullEarnings, setFullEarnings] = useState<DailyEarning[]>([]);
+  const [paymentRecords, setPaymentRecords] = useState<PaymentCycleRecord[]>([]);
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+
+  const handlePaymentRecordUpdated = (updatedRecord: PaymentCycleRecord) => {
+    setPaymentRecords((prev) => {
+      const exists = prev.some((r) => r.referencia_chave === updatedRecord.referencia_chave);
+      if (exists) {
+        return prev.map((r) =>
+          r.referencia_chave === updatedRecord.referencia_chave ? updatedRecord : r
+        );
+      }
+      return [updatedRecord, ...prev];
+    });
+  };
+
+  const handlePaymentRecordReverted = (refKey: string) => {
+    setPaymentRecords((prev) =>
+      prev.map((r) =>
+        r.referencia_chave === refKey
+          ? { ...r, status: 'pendente', valor_recebido: null, data_confirmacao: null, observacoes: null }
+          : r
+      )
+    );
+  };
 
   // Carregamento dos dados com base no período selecionado
   const fetchData = useCallback(
@@ -74,28 +105,29 @@ export const DashboardPage: React.FC = () => {
       try {
         let eQuery = supabase.from('daily_earnings').select('*').eq('user_id', user.id);
         let fQuery = supabase.from('fuel_logs').select('*').eq('user_id', user.id);
-        let mQuery = supabase.from('maintenance_logs').select('*').eq('user_id', user.id);
 
         if (startDate) {
           eQuery = eQuery.gte('data', startDate);
           fQuery = fQuery.gte('data', startDate);
-          mQuery = mQuery.gte('data', startDate);
         }
         if (endDate) {
           eQuery = eQuery.lte('data', endDate);
           fQuery = fQuery.lte('data', endDate);
-          mQuery = mQuery.lte('data', endDate);
         }
 
-        const [eRes, fRes, mRes] = await Promise.all([
+        const [eRes, fRes, mRes, allERes, pRes] = await Promise.all([
           eQuery.order('data', { ascending: true }),
           fQuery.order('data', { ascending: true }),
-          mQuery.order('data', { ascending: true }),
+          supabase.from('maintenance_logs').select('*').eq('user_id', user.id).order('data', { ascending: false }),
+          supabase.from('daily_earnings').select('*').eq('user_id', user.id).order('data', { ascending: false }),
+          supabase.from('payment_cycles').select('*').eq('user_id', user.id),
         ]);
 
         if (eRes.data) setEarnings(eRes.data as DailyEarning[]);
         if (fRes.data) setFuelLogs(fRes.data as FuelLog[]);
         if (mRes.data) setMaintenanceLogs(mRes.data as MaintenanceLog[]);
+        if (allERes.data) setFullEarnings(allERes.data as DailyEarning[]);
+        if (pRes.data) setPaymentRecords(pRes.data as PaymentCycleRecord[]);
       } catch (err) {
         console.error('Erro ao carregar dados do dashboard financeiro:', err);
       } finally {
@@ -118,24 +150,23 @@ export const DashboardPage: React.FC = () => {
       try {
         let eQuery = supabase.from('daily_earnings').select('*').eq('user_id', user.id);
         let fQuery = supabase.from('fuel_logs').select('*').eq('user_id', user.id);
-        let mQuery = supabase.from('maintenance_logs').select('*').eq('user_id', user.id);
 
         if (startDate) {
           eQuery = eQuery.gte('data', startDate);
           fQuery = fQuery.gte('data', startDate);
-          mQuery = mQuery.gte('data', startDate);
         }
         if (endDate) {
           eQuery = eQuery.lte('data', endDate);
           fQuery = fQuery.lte('data', endDate);
-          mQuery = mQuery.lte('data', endDate);
         }
 
-        const [eRes, fRes, mRes, vRes] = await Promise.all([
+        const [eRes, fRes, mRes, vRes, allERes, pRes] = await Promise.all([
           eQuery.order('data', { ascending: true }),
           fQuery.order('data', { ascending: true }),
-          mQuery.order('data', { ascending: true }),
+          supabase.from('maintenance_logs').select('*').eq('user_id', user.id).order('data', { ascending: false }),
           supabase.from('vehicles').select('*').eq('user_id', user.id).maybeSingle(),
+          supabase.from('daily_earnings').select('*').eq('user_id', user.id).order('data', { ascending: false }),
+          supabase.from('payment_cycles').select('*').eq('user_id', user.id),
         ]);
 
         if (!ignore) {
@@ -143,6 +174,8 @@ export const DashboardPage: React.FC = () => {
           if (fRes.data) setFuelLogs(fRes.data as FuelLog[]);
           if (mRes.data) setMaintenanceLogs(mRes.data as MaintenanceLog[]);
           if (vRes.data) setVehicle(vRes.data as Vehicle);
+          if (allERes.data) setFullEarnings(allERes.data as DailyEarning[]);
+          if (pRes.data) setPaymentRecords(pRes.data as PaymentCycleRecord[]);
         }
       } catch (err) {
         if (!ignore) console.error('Erro ao carregar dados do dashboard:', err);
@@ -177,9 +210,16 @@ export const DashboardPage: React.FC = () => {
     return maintenanceLogs.filter((m) => m.status !== 'orcamento');
   }, [maintenanceLogs]);
 
+  // Orçamentos pendentes do período filtrado
   const orcamentosPendentes = useMemo(() => {
-    return maintenanceLogs.filter((m) => m.status === 'orcamento');
-  }, [maintenanceLogs]);
+    const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
+    return maintenanceLogs.filter((m) => {
+      if (m.status !== 'orcamento') return false;
+      if (startDate && m.data < startDate) return false;
+      if (endDate && m.data > endDate) return false;
+      return true;
+    });
+  }, [maintenanceLogs, filterState, profile]);
 
   const totalOrcamentosPendentes = useMemo(() => {
     return orcamentosPendentes.reduce((acc, curr) => {
@@ -196,15 +236,17 @@ export const DashboardPage: React.FC = () => {
     return fuelLogs.reduce((acc, curr) => acc + (curr.valor_total_abastecido || 0), 0);
   }, [fuelLogs]);
 
-  const despesasOficina = useMemo(() => {
-    return maintenanceRealizados.reduce((acc, curr) => {
-      const valor =
-        typeof curr.valor_total === 'number'
-          ? curr.valor_total
-          : curr.valor_pecas + curr.valor_mao_de_obra;
-      return acc + valor;
-    }, 0);
-  }, [maintenanceRealizados]);
+  // Cálculo inteligente das despesas de oficina: distribui parcelamentos ao longo dos meses
+  const maintenanceExpensesSummary = useMemo(() => {
+    const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
+    return calculatePeriodMaintenanceExpenses(maintenanceLogs, {
+      monthYear: filterState.periodChip === 'month' ? filterState.monthYear : undefined,
+      startDate,
+      endDate,
+    });
+  }, [maintenanceLogs, filterState, profile]);
+
+  const despesasOficina = maintenanceExpensesSummary.totalExpenses;
 
   const despesasTotais = useMemo(() => {
     return despesasCombustivel + despesasOficina;
@@ -265,16 +307,44 @@ export const DashboardPage: React.FC = () => {
       map.set(d, { ...prev, despesas: prev.despesas + (f.valor_total_abastecido || 0) });
     });
 
-    // Soma oficina realizada por data (orçamentos pendentes NÃO entram nas despesas do gráfico)
+    // Soma oficina realizada por data: à vista na data do serviço e parcelado no dia de cada parcela
+    const { startDate, endDate } = calculateFilterDateRange(filterState, profile);
+
     maintenanceRealizados.forEach((m) => {
-      const d = m.data;
-      if (!d) return;
-      const prev = map.get(d) || { faturamento: 0, despesas: 0 };
-      const val =
-        typeof m.valor_total === 'number'
-          ? m.valor_total
-          : m.valor_pecas + m.valor_mao_de_obra;
-      map.set(d, { ...prev, despesas: prev.despesas + val });
+      const isParcel = isServiceParcelado(m);
+      if (!isParcel) {
+        const d = m.data;
+        if (!d) return;
+        if (startDate && d < startDate) return;
+        if (endDate && d > endDate) return;
+        const prev = map.get(d) || { faturamento: 0, despesas: 0 };
+        const val =
+          typeof m.valor_total === 'number'
+            ? m.valor_total
+            : m.valor_pecas + m.valor_mao_de_obra;
+        map.set(d, { ...prev, despesas: prev.despesas + val });
+      } else {
+        const totalParcelas = Math.max(m.qtd_parcelas || 1, 1);
+        const valorTotalServico =
+          typeof m.valor_total === 'number'
+            ? m.valor_total
+            : m.valor_pecas + m.valor_mao_de_obra;
+        const valorParcela =
+          typeof m.valor_parcela === 'number' && m.valor_parcela > 0
+            ? m.valor_parcela
+            : valorTotalServico / totalParcelas;
+
+        const firstDate = m.mes_primeira_parcela || m.data || '';
+
+        for (let i = 0; i < totalParcelas; i++) {
+          const instDate = getInstallmentDate(firstDate, i);
+          if (startDate && instDate < startDate) continue;
+          if (endDate && instDate > endDate) continue;
+
+          const prev = map.get(instDate) || { faturamento: 0, despesas: 0 };
+          map.set(instDate, { ...prev, despesas: prev.despesas + valorParcela });
+        }
+      }
     });
 
     const sortedDates = Array.from(map.keys()).sort();
@@ -289,7 +359,7 @@ export const DashboardPage: React.FC = () => {
         lucro: Number((item.faturamento - item.despesas).toFixed(2)),
       };
     });
-  }, [earnings, fuelLogs, maintenanceRealizados]);
+  }, [earnings, fuelLogs, maintenanceRealizados, filterState, profile]);
 
   // Dados para o Gráfico de Rosca (Proporção de Despesas)
   const donutData = useMemo(() => {
@@ -303,7 +373,7 @@ export const DashboardPage: React.FC = () => {
     }
     if (despesasOficina > 0) {
       list.push({
-        name: 'Oficina (Serviços Realizados)',
+        name: 'Oficina (Serviços Realizados + Parcelas do Mês)',
         value: Number(despesasOficina.toFixed(2)),
         color: '#3b82f6', // blue-500
       });
@@ -425,11 +495,29 @@ export const DashboardPage: React.FC = () => {
           <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">
             {formatCurrency(despesasTotais)}
           </div>
-          <div className="mt-2 text-[11px] text-slate-400 flex flex-wrap gap-x-2">
+          <div className="mt-2 text-[11px] text-slate-400 flex flex-wrap items-center gap-x-2">
             <span className="text-amber-400 font-medium">⛽ {formatCurrency(despesasCombustivel)}</span>
             <span className="text-slate-600">•</span>
-            <span className="text-blue-400 font-medium">🔧 {formatCurrency(despesasOficina)}</span>
+            <span className="text-blue-400 font-medium" title="Despesa de Oficina no Mês (Parcelas + À vista)">
+              🔧 {formatCurrency(despesasOficina)}
+            </span>
           </div>
+          {maintenanceExpensesSummary.parcelasTotal > 0 && (
+            <div className="mt-1 text-[10px] text-blue-300/80">
+              (inclui {formatCurrency(maintenanceExpensesSummary.parcelasTotal)} em parcelas)
+            </div>
+          )}
+          {maintenanceExpensesSummary.futureCommittedTotal > 0 && (
+            <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400 flex items-center gap-1.5">
+              <CreditCard className="w-3 h-3 text-cyan-400 shrink-0" />
+              <span>
+                Comprometimento futuro em parcelas:{' '}
+                <strong className="text-cyan-300 font-mono">
+                  {formatCurrency(maintenanceExpensesSummary.futureCommittedTotal)}
+                </strong>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Card C: Lucro Líquido Real (Destaque Verde se >= 0, Vermelho se < 0) */}
@@ -530,9 +618,12 @@ export const DashboardPage: React.FC = () => {
 
       {/* CARDS DE FECHAMENTO DE RECEBIMENTOS */}
       <PaymentCyclesCards
-        earnings={earnings}
+        earnings={fullEarnings.length > 0 ? fullEarnings : earnings}
         referenceMonth={filterState.monthYear}
         title="Fechamento de Pagamentos por Ciclo"
+        paymentRecords={paymentRecords}
+        onRecordUpdated={handlePaymentRecordUpdated}
+        onRecordReverted={handlePaymentRecordReverted}
       />
 
       {/* GRÁFICO DE BARRAS RESPONSIVO: FATURAMENTO VS DESPESAS VS LUCRO LÍQUIDO */}
@@ -689,7 +780,11 @@ export const DashboardPage: React.FC = () => {
                   <div className="w-4 h-4 rounded-full bg-blue-500 shrink-0" />
                   <div>
                     <p className="text-xs font-bold text-white">Oficina & Manutenção</p>
-                    <p className="text-[11px] text-slate-400">{maintenanceLogs.length} serviços</p>
+                    <p className="text-[11px] text-slate-400">
+                      {maintenanceExpensesSummary.parcelasTotal > 0
+                        ? `À vista + parcelas ativas no mês`
+                        : `${maintenanceLogs.length} serviços realizados`}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -712,6 +807,16 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* SEÇÃO HISTÓRICA: MEUS FECHAMENTOS (HOLERITES) */}
+      <PaymentCyclesHistory
+        earnings={fullEarnings.length > 0 ? fullEarnings : earnings}
+        profile={profile}
+        vehicle={vehicle}
+        paymentRecords={paymentRecords}
+        onPaymentRecordUpdated={handlePaymentRecordUpdated}
+        onPaymentRecordReverted={handlePaymentRecordReverted}
+      />
 
       {/* Modal de Pré-visualização e Impressão do Relatório */}
       <ReportPrintModal

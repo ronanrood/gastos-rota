@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Wrench, ClipboardList } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Wrench, ClipboardList, CreditCard } from 'lucide-react';
 import type { MaintenanceLog, Profile, Vehicle } from '../../types/database';
 import { calculateFilterDateRange, type HistoryFilterState } from '../../utils/filterUtils';
+import { calculatePeriodMaintenanceExpenses } from '../../utils/maintenanceInstallments';
 import { FilterShareActions } from '../export/FilterShareActions';
 import { ReportPrintModal } from '../export/ReportPrintModal';
 import { generateWhatsAppMaintenanceText } from '../../utils/exportUtils';
@@ -27,18 +28,18 @@ export const MaintenanceFilterSummary: React.FC<MaintenanceFilterSummaryProps> =
   vehicle,
 }) => {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-  const { periodLabel } = calculateFilterDateRange(filterState, profile);
+  const { periodLabel, startDate, endDate } = calculateFilterDateRange(filterState, profile);
 
-  const realizados = items.filter((m) => m.status !== 'orcamento');
   const orcamentos = items.filter((m) => m.status === 'orcamento');
 
-  const totalRealizados = realizados.reduce((acc, curr) => {
-    const val =
-      typeof curr.valor_total === 'number'
-        ? curr.valor_total
-        : (curr.valor_pecas || 0) + (curr.valor_mao_de_obra || 0);
-    return acc + val;
-  }, 0);
+  // Cálculo real do impacto no caixa no período (à vista + parcelas ativas)
+  const periodExpenses = useMemo(() => {
+    return calculatePeriodMaintenanceExpenses(items, {
+      monthYear: filterState.periodChip === 'month' ? filterState.monthYear : undefined,
+      startDate,
+      endDate,
+    });
+  }, [items, filterState, startDate, endDate]);
 
   const totalOrcamentos = orcamentos.reduce((acc, curr) => {
     const val =
@@ -65,7 +66,7 @@ export const MaintenanceFilterSummary: React.FC<MaintenanceFilterSummaryProps> =
             <p className="text-[11px] text-slate-400 mt-0.5">
               {items.length === 0
                 ? 'Nenhum lançamento no período'
-                : `${realizados.length} ${realizados.length === 1 ? 'serviço realizado' : 'serviços realizados'} • ${orcamentos.length} ${orcamentos.length === 1 ? 'orçamento pendente' : 'orçamentos pendentes'}`}
+                : `${items.length - orcamentos.length} serviços realizados • ${orcamentos.length} ${orcamentos.length === 1 ? 'orçamento pendente' : 'orçamentos pendentes'}`}
             </p>
           </div>
 
@@ -77,23 +78,28 @@ export const MaintenanceFilterSummary: React.FC<MaintenanceFilterSummaryProps> =
 
         {/* Grid de Totais */}
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {/* Total Gasto em Serviços Realizados */}
+          {/* Total Gasto em Serviços Realizados (Caixa Real do Período) */}
           <div className="bg-slate-950/80 border border-blue-500/30 rounded-2xl p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between text-xs font-semibold text-blue-400">
               <span className="flex items-center gap-1.5">
                 <Wrench className="w-4 h-4" />
-                Serviços Concluídos (Pago)
+                Despesa no Caixa (À Vista + Parcelas)
               </span>
-              <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold">
-                {realizados.length} {realizados.length === 1 ? 'serviço' : 'serviços'}
-              </span>
+              {periodExpenses.activeInstallmentsCount > 0 && (
+                <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                  <CreditCard className="w-3 h-3" />
+                  {periodExpenses.activeInstallmentsCount} parcelas
+                </span>
+              )}
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white mt-1 tracking-tight font-mono">
-              {formatCurrency(totalRealizados)}
+              {formatCurrency(periodExpenses.totalExpenses)}
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Impacta diretamente o lucro líquido real do período
-            </p>
+            <div className="text-[11px] text-slate-400 mt-1 flex flex-wrap items-center gap-x-2">
+              <span>À Vista: <strong className="text-slate-300">{formatCurrency(periodExpenses.avistaTotal)}</strong></span>
+              <span>•</span>
+              <span>Parcelas do Mês: <strong className="text-blue-300">{formatCurrency(periodExpenses.parcelasTotal)}</strong></span>
+            </div>
           </div>
 
           {/* Total em Orçamentos Pendentes */}

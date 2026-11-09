@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import type { MaintenanceLog, MaintenanceLogUpdate, MaintenanceStatus } from '../../types/database';
+import type { MaintenanceLog, MaintenanceLogUpdate, MaintenanceStatus, PaymentMethod } from '../../types/database';
 import {
   X,
   Pencil,
@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Wrench,
   ClipboardList,
+  CreditCard,
 } from 'lucide-react';
 
 interface EditMaintenanceModalProps {
@@ -61,6 +62,18 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
   const [valorPecas, setValorPecas] = useState<string>(() => maintenanceLog.valor_pecas?.toString() || '0');
   const [valorMaoDeObra, setValorMaoDeObra] = useState<string>(() => maintenanceLog.valor_mao_de_obra?.toString() || '0');
   const [garantiaAte, setGarantiaAte] = useState<string>(() => maintenanceLog.garantia_ate || '');
+  const [formaPagamento, setFormaPagamento] = useState<PaymentMethod>(() => maintenanceLog.forma_pagamento || 'avista');
+  const [qtdParcelas, setQtdParcelas] = useState<string>(() => (maintenanceLog.qtd_parcelas || 2).toString());
+  const [valorParcela, setValorParcela] = useState<string>(() => {
+    if (maintenanceLog.valor_parcela) return maintenanceLog.valor_parcela.toString();
+    const total = (maintenanceLog.valor_pecas || 0) + (maintenanceLog.valor_mao_de_obra || 0);
+    const q = maintenanceLog.qtd_parcelas || 2;
+    return (total / q).toFixed(2);
+  });
+  const [mesPrimeiraParcela, setMesPrimeiraParcela] = useState<string>(() => {
+    return maintenanceLog.mes_primeira_parcela || maintenanceLog.data || TODAY_STR;
+  });
+
   const existingComprovanteUrl = maintenanceLog.comprovante_url || null;
   const [removeExistingFile, setRemoveExistingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -179,6 +192,9 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
        * NUNCA envie a coluna 'valor_total', 'id' ou 'created_at' no payload do UPDATE.
        * A coluna valor_total é GENERATED ALWAYS no PostgreSQL.
        */
+      const parsedQtd = parseInt(qtdParcelas, 10) || 1;
+      const parsedValParc = parseFloat(valorParcela.replace(',', '.')) || (valorTotalEstimado / parsedQtd);
+
       const payload: MaintenanceLogUpdate = {
         data,
         oficina_nome: oficinaNome.trim(),
@@ -188,6 +204,10 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
         garantia_ate: garantiaAte ? garantiaAte : null,
         comprovante_url: finalComprovanteUrl,
         status,
+        forma_pagamento: formaPagamento,
+        qtd_parcelas: formaPagamento === 'parcelado' ? parsedQtd : 1,
+        valor_parcela: formaPagamento === 'parcelado' ? Number(parsedValParc.toFixed(2)) : null,
+        mes_primeira_parcela: formaPagamento === 'parcelado' ? (mesPrimeiraParcela || data) : null,
       };
 
       const { data: updated, error } = await supabase
@@ -437,6 +457,115 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
                   className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                 />
               </div>
+            </div>
+
+            {/* SELETOR DE FORMA DE PAGAMENTO */}
+            <div className="sm:col-span-2 p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-200 mb-2 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-blue-400" />
+                  Forma de Pagamento
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormaPagamento('avista')}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-bold text-xs transition cursor-pointer active:scale-[0.98] ${
+                      formaPagamento === 'avista'
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                        : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                    }`}
+                  >
+                    <span>💵 À Vista</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormaPagamento('parcelado');
+                      const q = parseInt(qtdParcelas, 10) || 2;
+                      setValorParcela((valorTotalEstimado / q).toFixed(2));
+                    }}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-bold text-xs transition cursor-pointer active:scale-[0.98] ${
+                      formaPagamento === 'parcelado'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                        : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                    }`}
+                  >
+                    <span>💳 Parcelado</span>
+                  </button>
+                </div>
+              </div>
+
+              {formaPagamento === 'parcelado' && (
+                <div className="pt-2 border-t border-slate-800 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        Qtd Parcelas
+                      </label>
+                      <select
+                        value={qtdParcelas}
+                        onChange={(e) => {
+                          const q = e.target.value;
+                          setQtdParcelas(q);
+                          const numQ = parseInt(q, 10) || 1;
+                          setValorParcela((valorTotalEstimado / numQ).toFixed(2));
+                        }}
+                        className="w-full px-2.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs font-bold"
+                      >
+                        {Array.from({ length: 23 }, (_, i) => i + 2).map((num) => (
+                          <option key={num} value={num}>
+                            {num}x parcelas
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                        <span>Valor Parcela</span>
+                        <span className="text-[9px] text-slate-400">Juros?</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">
+                          R$
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={valorParcela}
+                          onChange={(e) => setValorParcela(e.target.value)}
+                          className="w-full pl-8 pr-2.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-emerald-400 font-mono font-bold text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                        1ª Parcela
+                      </label>
+                      <input
+                        type="date"
+                        value={mesPrimeiraParcela}
+                        onChange={(e) => setMesPrimeiraParcela(e.target.value)}
+                        className="w-full px-2.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-center justify-between flex-wrap gap-1">
+                    <span>
+                      Total: <strong>{formatCurrency(valorTotalEstimado)}</strong> →{' '}
+                      <strong>{qtdParcelas}x de {formatCurrency(parseFloat(valorParcela) || 0)}</strong>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                      Impacto mensal: {formatCurrency(parseFloat(valorParcela) || 0)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Descrição do Serviço */}

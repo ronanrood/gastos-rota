@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { DailyEarning, Vehicle } from '../../types/database';
+import type { DailyEarning, Vehicle, PaymentCycleRecord } from '../../types/database';
 import {
   Calendar,
   Package,
@@ -25,6 +25,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
+import { PaymentCyclesHistory } from '../payment/PaymentCyclesHistory';
 import { EditEarningModal } from './EditEarningModal';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
 import { EarningsFilterSummary } from '../filters/EarningsFilterSummary';
@@ -65,6 +66,7 @@ export const DailyEarningsPage: React.FC = () => {
   const [loadingList, setLoadingList] = useState(true);
   const [earningsList, setEarningsList] = useState<DailyEarning[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [paymentRecords, setPaymentRecords] = useState<PaymentCycleRecord[]>([]);
   const [filterState, setFilterState] = useState<HistoryFilterState>(getDefaultFilterState);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -78,6 +80,28 @@ export const DailyEarningsPage: React.FC = () => {
     setTimeout(() => {
       setFormSuccess(null);
     }, 4000);
+  };
+
+  const handlePaymentRecordUpdated = (updatedRecord: PaymentCycleRecord) => {
+    setPaymentRecords((prev) => {
+      const exists = prev.some((r) => r.referencia_chave === updatedRecord.referencia_chave);
+      if (exists) {
+        return prev.map((r) =>
+          r.referencia_chave === updatedRecord.referencia_chave ? updatedRecord : r
+        );
+      }
+      return [updatedRecord, ...prev];
+    });
+  };
+
+  const handlePaymentRecordReverted = (refKey: string) => {
+    setPaymentRecords((prev) =>
+      prev.map((r) =>
+        r.referencia_chave === refKey
+          ? { ...r, status: 'pendente', valor_recebido: null, data_confirmacao: null, observacoes: null }
+          : r
+      )
+    );
   };
 
   // Controle de recolhimento da seção Últimos Lançamentos (com persistência local)
@@ -184,17 +208,26 @@ export const DailyEarningsPage: React.FC = () => {
     if (!user) return;
     setLoadingList(true);
     try {
-      const { data: rows, error } = await supabase
-        .from('daily_earnings')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('data', { ascending: false })
-        .order('created_at', { ascending: false });
+      const [earningsRes, paymentRes] = await Promise.all([
+        supabase
+          .from('daily_earnings')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('data', { ascending: false })
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('payment_cycles')
+          .select('*')
+          .eq('user_id', user.id),
+      ]);
 
-      if (error) {
-        console.error('Erro ao carregar ganhos:', error.message);
-      } else if (rows) {
-        setEarningsList(rows as DailyEarning[]);
+      if (earningsRes.error) {
+        console.error('Erro ao carregar ganhos:', earningsRes.error.message);
+      } else if (earningsRes.data) {
+        setEarningsList(earningsRes.data as DailyEarning[]);
+      }
+      if (paymentRes.data) {
+        setPaymentRecords(paymentRes.data as PaymentCycleRecord[]);
       }
     } catch (err) {
       console.error('Falha na requisição de ganhos:', err);
@@ -213,7 +246,7 @@ export const DailyEarningsPage: React.FC = () => {
         return;
       }
       try {
-        const [earningsRes, vehicleRes] = await Promise.all([
+        const [earningsRes, vehicleRes, paymentCyclesRes] = await Promise.all([
           supabase
             .from('daily_earnings')
             .select('*')
@@ -225,6 +258,10 @@ export const DailyEarningsPage: React.FC = () => {
             .select('*')
             .eq('user_id', user.id)
             .maybeSingle(),
+          supabase
+            .from('payment_cycles')
+            .select('*')
+            .eq('user_id', user.id),
         ]);
 
         if (!ignore) {
@@ -235,6 +272,9 @@ export const DailyEarningsPage: React.FC = () => {
           }
           if (vehicleRes.data) {
             setVehicle(vehicleRes.data as Vehicle);
+          }
+          if (paymentCyclesRes.data) {
+            setPaymentRecords(paymentCyclesRes.data as PaymentCycleRecord[]);
           }
         }
       } catch (err) {
@@ -445,6 +485,10 @@ export const DailyEarningsPage: React.FC = () => {
         earnings={earningsList}
         referenceMonth={filterState.monthYear}
         title="Meus Recebimentos (Fechamento de Quinzena)"
+        paymentRecords={paymentRecords}
+        onRecordUpdated={handlePaymentRecordUpdated}
+        onRecordReverted={handlePaymentRecordReverted}
+        onRefresh={refreshEarnings}
       />
 
       {/* CARD PRINCIPAL: ENCARTE DE LANÇAMENTO DIÁRIO */}
@@ -786,6 +830,9 @@ export const DailyEarningsPage: React.FC = () => {
               filterState={filterState}
               profile={profile}
               vehicle={vehicle}
+              paymentRecords={paymentRecords}
+              onPaymentRecordUpdated={handlePaymentRecordUpdated}
+              onPaymentRecordReverted={handlePaymentRecordReverted}
             />
 
             {/* Loading Skeleton */}
@@ -954,6 +1001,16 @@ export const DailyEarningsPage: React.FC = () => {
           </>
         )}
       </section>
+
+      {/* SEÇÃO HISTÓRICA: MEUS FECHAMENTOS (HOLERITES) */}
+      <PaymentCyclesHistory
+        earnings={earningsList}
+        profile={profile}
+        vehicle={vehicle}
+        paymentRecords={paymentRecords}
+        onPaymentRecordUpdated={handlePaymentRecordUpdated}
+        onPaymentRecordReverted={handlePaymentRecordReverted}
+      />
 
       {/* Modal Responsivo de Edição de Lançamento */}
       {editingEarning && (
