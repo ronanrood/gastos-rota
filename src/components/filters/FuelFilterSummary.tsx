@@ -27,7 +27,7 @@ export const FuelFilterSummary: React.FC<FuelFilterSummaryProps> = ({
   vehicle,
 }) => {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-  const { periodLabel } = calculateFilterDateRange(filterState, profile);
+  const { periodLabel, startDate, endDate } = calculateFilterDateRange(filterState, profile);
 
   const totalGasto = items.reduce((acc, curr) => acc + (curr.valor_total_abastecido || 0), 0);
 
@@ -133,6 +133,8 @@ export const FuelFilterSummary: React.FC<FuelFilterSummaryProps> = ({
         vehicle={vehicle}
         periodLabel={periodLabel}
         fuelItems={items}
+        startDate={startDate}
+        endDate={endDate}
       />
     </>
   );

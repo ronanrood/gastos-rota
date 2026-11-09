@@ -146,6 +146,8 @@ export const MaintenanceFilterSummary: React.FC<MaintenanceFilterSummaryProps> =
         vehicle={vehicle}
         periodLabel={periodLabel}
         maintenanceItems={items}
+        startDate={startDate}
+        endDate={endDate}
       />
     </>
   );

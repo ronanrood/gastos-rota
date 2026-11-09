@@ -368,3 +368,309 @@ export const generateWhatsAppDashboardText = (options: {
 
   return lines.join('\n');
 };
+
+/**
+ * Configuração de blocos do relatório customizado
+ */
+export interface CustomReportConfig {
+  includeGanhos: boolean;
+  includeDetalhamentoGanhos: boolean;
+  includeCombustivel: boolean;
+  includeOficina: boolean;
+  includeLucro: boolean;
+  includeKm: boolean;
+  includeDadosPix: boolean;
+}
+
+export type CustomReportPreset =
+  | 'cobranca_transportadora'
+  | 'apenas_resumo_liquido'
+  | 'apenas_despesas'
+  | 'completo'
+  | 'custom';
+
+export const PRESET_CONFIGS: Record<Exclude<CustomReportPreset, 'custom'>, CustomReportConfig> = {
+  cobranca_transportadora: {
+    includeGanhos: true,
+    includeDetalhamentoGanhos: true,
+    includeCombustivel: false,
+    includeOficina: false,
+    includeLucro: false,
+    includeKm: true,
+    includeDadosPix: true,
+  },
+  apenas_resumo_liquido: {
+    includeGanhos: true,
+    includeDetalhamentoGanhos: false,
+    includeCombustivel: true,
+    includeOficina: true,
+    includeLucro: true,
+    includeKm: true,
+    includeDadosPix: false,
+  },
+  apenas_despesas: {
+    includeGanhos: false,
+    includeDetalhamentoGanhos: false,
+    includeCombustivel: true,
+    includeOficina: true,
+    includeLucro: false,
+    includeKm: false,
+    includeDadosPix: false,
+  },
+  completo: {
+    includeGanhos: true,
+    includeDetalhamentoGanhos: true,
+    includeCombustivel: true,
+    includeOficina: true,
+    includeLucro: true,
+    includeKm: true,
+    includeDadosPix: true,
+  },
+};
+
+/**
+ * Determina se a configuração atual é idêntica a algum dos presets
+ */
+export const getMatchingPreset = (config: CustomReportConfig): CustomReportPreset => {
+  const keys: (keyof CustomReportConfig)[] = [
+    'includeGanhos',
+    'includeDetalhamentoGanhos',
+    'includeCombustivel',
+    'includeOficina',
+    'includeLucro',
+    'includeKm',
+    'includeDadosPix',
+  ];
+
+  for (const preset of ['cobranca_transportadora', 'apenas_resumo_liquido', 'apenas_despesas', 'completo'] as const) {
+    const presetCfg = PRESET_CONFIGS[preset];
+    const isMatch = keys.every((k) => config[k] === presetCfg[k]);
+    if (isMatch) return preset;
+  }
+  return 'custom';
+};
+
+/**
+ * Gera texto para WhatsApp do Relatório Personalizado com base nos blocos marcados
+ */
+export const generateCustomWhatsAppText = (options: {
+  profile: Profile | null;
+  vehicle?: Vehicle | null;
+  periodLabel: string;
+  paymentNotice?: string;
+  config: CustomReportConfig;
+  earningsItems?: DailyEarning[];
+  fuelItems?: FuelLog[];
+  maintenanceItems?: MaintenanceLog[];
+  totals?: {
+    faturamentoBruto?: number;
+    diasProducao?: number;
+    totalPecas?: number;
+    totalBonus?: number;
+    totalKmRodados?: number;
+    despesasCombustivel?: number;
+    totalLitros?: number;
+    precoMedioLitro?: number;
+    despesasOficina?: number;
+    parcelasTotal?: number;
+    activeInstallmentsCount?: number;
+    futureCommittedTotal?: number;
+    despesasTotais?: number;
+    lucroLiquidoReal?: number;
+    margemLucro?: number;
+  };
+}): string => {
+  const {
+    profile,
+    vehicle,
+    periodLabel,
+    paymentNotice,
+    config,
+    earningsItems = [],
+    fuelItems = [],
+    maintenanceItems = [],
+    totals = {},
+  } = options;
+
+  // Cálculos de Ganhos
+  const sortedEarnings = [...earningsItems].sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+  const calcFaturamento = sortedEarnings.reduce((acc, curr) => {
+    const val =
+      typeof curr.faturamento_bruto === 'number'
+        ? curr.faturamento_bruto
+        : (curr.qtd_pecas || 0) * (curr.valor_unitario_peca || 0) + (curr.valor_extra_bonus || 0);
+    return acc + val;
+  }, 0);
+  const faturamentoBruto = totals.faturamentoBruto ?? calcFaturamento;
+  const diasProducao = totals.diasProducao ?? sortedEarnings.length;
+  const totalPecas = totals.totalPecas ?? sortedEarnings.reduce((acc, curr) => acc + (curr.qtd_pecas || 0), 0);
+  const totalBonus = totals.totalBonus ?? sortedEarnings.reduce((acc, curr) => acc + (curr.valor_extra_bonus || 0), 0);
+  const calcKmEarnings = sortedEarnings.reduce((acc, curr) => acc + (curr.km_rodado || 0), 0);
+  const totalKmRodados = totals.totalKmRodados ?? calcKmEarnings;
+
+  // Cálculos de Combustível
+  const calcCombustivel = fuelItems.reduce((acc, curr) => acc + (curr.valor_total_abastecido || 0), 0);
+  const despesasCombustivel = totals.despesasCombustivel ?? calcCombustivel;
+  const totalLitros =
+    totals.totalLitros ??
+    fuelItems.reduce((acc, curr) => {
+      const l =
+        typeof curr.litros_calculados === 'number'
+          ? curr.litros_calculados
+          : (curr.valor_total_abastecido || 0) / (curr.preco_por_litro_ou_m3 || 1);
+      return acc + (isNaN(l) ? 0 : l);
+    }, 0);
+  const precoMedioLitro = totals.precoMedioLitro ?? (totalLitros > 0 ? despesasCombustivel / totalLitros : 0);
+
+  // Cálculos de Oficina
+  const despesasOficina = totals.despesasOficina ?? maintenanceItems
+    .filter((m) => m.status !== 'orcamento')
+    .reduce((acc, curr) => {
+      const val = typeof curr.valor_total === 'number' ? curr.valor_total : (curr.valor_pecas || 0) + (curr.valor_mao_de_obra || 0);
+      return acc + val;
+    }, 0);
+  const parcelasTotal = totals.parcelasTotal ?? 0;
+  const activeInstallmentsCount = totals.activeInstallmentsCount ?? 0;
+  const futureCommittedTotal = totals.futureCommittedTotal ?? 0;
+
+  // Cálculos Totais e Lucro
+  const despesasTotais = totals.despesasTotais ?? (despesasCombustivel + despesasOficina);
+  const lucroLiquidoReal = totals.lucroLiquidoReal ?? (faturamentoBruto - despesasTotais);
+  const margemLucro = totals.margemLucro ?? (faturamentoBruto > 0 ? (lucroLiquidoReal / faturamentoBruto) * 100 : 0);
+  const ganhoKm = totalKmRodados > 0 ? faturamentoBruto / totalKmRodados : 0;
+  const lucroKm = totalKmRodados > 0 ? lucroLiquidoReal / totalKmRodados : 0;
+
+  // Título contextual baseado no conteúdo selecionado
+  let cabecalhoTitulo = '*EXTRATO DE OPERAÇÃO - GASTOS ROTA*';
+  if (config.includeGanhos && !config.includeCombustivel && !config.includeOficina && !config.includeLucro) {
+    cabecalhoTitulo = '*COBRANÇA DE ROTA - GASTOS ROTA*';
+  } else if (!config.includeGanhos && (config.includeCombustivel || config.includeOficina)) {
+    cabecalhoTitulo = '*RELATÓRIO DE DESPESAS OPERACIONAIS - GASTOS ROTA*';
+  } else if (config.includeLucro) {
+    cabecalhoTitulo = '*FECHAMENTO FINANCEIRO E LUCRO LÍQUIDO - GASTOS ROTA*';
+  }
+
+  const lines: string[] = [cabecalhoTitulo, '----------------------------------------'];
+
+  // Identificação do Motorista
+  if (profile?.nome) lines.push(`👤 *Motorista:* ${profile.nome}`);
+  if (profile?.transportadora) lines.push(`🏢 *Transportadora:* ${profile.transportadora}`);
+  if (profile?.rota) lines.push(`📍 *Rota:* ${profile.rota}`);
+  if (config.includeDadosPix && profile?.cpf_cnpj) lines.push(`📄 *CPF/CNPJ:* ${profile.cpf_cnpj}`);
+  if (vehicle) lines.push(`🚗 *Veículo:* ${vehicle.marca} ${vehicle.modelo} (${vehicle.ano})`);
+
+  let periodoTexto = periodLabel;
+  if (paymentNotice) {
+    periodoTexto += ` • ${paymentNotice}`;
+  }
+  lines.push(`📅 *Período:* ${periodoTexto}`);
+  lines.push('----------------------------------------');
+
+  // Bloco 1: Ganhos Brutos e Entregas
+  if (config.includeGanhos) {
+    lines.push('*RESUMO DE FATURAMENTO:*');
+    lines.push(`• *Faturamento Bruto:* ${formatCurrency(faturamentoBruto)}`);
+    lines.push(`• *Dias Trabalhados:* ${diasProducao} dias`);
+    lines.push(`• *Peças Entregues:* ${totalPecas.toLocaleString('pt-BR')} peças`);
+    if (totalBonus > 0) {
+      lines.push(`• *Total em Bônus:* ${formatCurrency(totalBonus)}`);
+    }
+    if (config.includeKm && totalKmRodados > 0) {
+      lines.push(`• *Faturamento por KM:* ${formatCurrency(ganhoKm)}/km`);
+    }
+    lines.push('----------------------------------------');
+
+    // Detalhamento Dia a Dia dos Ganhos
+    if (config.includeDetalhamentoGanhos && sortedEarnings.length > 0) {
+      lines.push('*Detalhamento dos Dias Trabalhados:*');
+      sortedEarnings.forEach((item) => {
+        const fat =
+          typeof item.faturamento_bruto === 'number'
+            ? item.faturamento_bruto
+            : item.qtd_pecas * item.valor_unitario_peca + item.valor_extra_bonus;
+        const dataFormatada = formatDateShortBR(item.data);
+        let row = `- ${dataFormatada}: ${item.qtd_pecas} pçs x ${formatCurrency(item.valor_unitario_peca)} = ${formatCurrency(fat)}`;
+        if (item.km_rodado > 0) {
+          row += ` | KM ${item.km_rodado}`;
+        }
+        if (item.valor_extra_bonus > 0) {
+          row += ` (+${formatCurrency(item.valor_extra_bonus)} bônus)`;
+        }
+        lines.push(row);
+      });
+      lines.push('----------------------------------------');
+    }
+  }
+
+  // Bloco 2: Despesas de Combustível
+  if (config.includeCombustivel) {
+    lines.push('*DESPESAS DE COMBUSTÍVEL:*');
+    lines.push(`• *Total Abastecido:* ${formatCurrency(despesasCombustivel)}`);
+    if (totalLitros > 0) {
+      lines.push(`• *Volume:* ${totalLitros.toFixed(2)} L/m³ (${fuelItems.length} abastecimentos)`);
+    }
+    if (precoMedioLitro > 0) {
+      lines.push(`• *Preço Médio por Litro:* ${formatCurrency(precoMedioLitro)}`);
+    }
+    if (config.includeKm && totalKmRodados > 0 && despesasCombustivel > 0) {
+      lines.push(`• *Custo Combustível/KM:* ${formatCurrency(despesasCombustivel / totalKmRodados)}/km`);
+    }
+    lines.push('----------------------------------------');
+  }
+
+  // Bloco 3: Despesas de Oficina e Parcelas
+  if (config.includeOficina) {
+    lines.push('*DESPESAS DE OFICINA & MANUTENÇÃO:*');
+    lines.push(`• *Despesa no Período (À Vista + Parcelas):* ${formatCurrency(despesasOficina)}`);
+    if (parcelasTotal > 0) {
+      lines.push(`• *Parcelas Ativas no Mês:* ${formatCurrency(parcelasTotal)} (${activeInstallmentsCount} ${activeInstallmentsCount === 1 ? 'parcela' : 'parcelas'})`);
+    }
+    if (futureCommittedTotal > 0) {
+      lines.push(`• *Comprometimento Futuro em Parcelas:* ${formatCurrency(futureCommittedTotal)}`);
+    }
+    lines.push('----------------------------------------');
+  }
+
+  // Bloco 4: Lucro Líquido Real
+  if (config.includeLucro) {
+    lines.push('*RESULTADO LÍQUIDO REAL:*');
+    if (config.includeGanhos) {
+      lines.push(`• (+) Faturamento Bruto: ${formatCurrency(faturamentoBruto)}`);
+    }
+    if (config.includeCombustivel || config.includeOficina) {
+      lines.push(`• (-) Despesas Operacionais: ${formatCurrency(despesasTotais)}`);
+    }
+    lines.push(`• *LUCRO LÍQUIDO REAL:* ${formatCurrency(lucroLiquidoReal)}`);
+    if (faturamentoBruto > 0) {
+      lines.push(`• *Margem de Lucro:* ${margemLucro.toFixed(1)}%`);
+    }
+    if (config.includeKm && totalKmRodados > 0) {
+      lines.push(`• *Lucro Líquido por KM:* ${formatCurrency(lucroKm)}/km`);
+    }
+    lines.push('----------------------------------------');
+  }
+
+  // Bloco 5: KM Standalone (se não foi exibido dentro de Ganhos/Lucro)
+  if (config.includeKm && !config.includeGanhos && !config.includeLucro && totalKmRodados > 0) {
+    lines.push('*INDICADORES DE QUILOMETRAGEM:*');
+    lines.push(`• *KM Total Rodado:* ${totalKmRodados.toLocaleString('pt-BR')} km`);
+    lines.push('----------------------------------------');
+  }
+
+  // Bloco 6: Dados e Chave PIX
+  if (config.includeDadosPix) {
+    lines.push('*DADOS PARA PAGAMENTO (PIX):*');
+    if (profile?.nome) lines.push(`👤 *Favorecido:* ${profile.nome}`);
+    if (profile?.cpf_cnpj) lines.push(`📄 *CPF/CNPJ:* ${profile.cpf_cnpj}`);
+    if (profile?.chave_pix) {
+      lines.push(`💳 *Chave PIX:* ${profile.chave_pix}`);
+    } else {
+      lines.push(`💳 *Chave PIX:* Solicitar ao motorista`);
+    }
+    lines.push('----------------------------------------');
+  }
+
+  lines.push(`_Relatório emitido em ${formatDateTimeNow()} pelo app Gastos Rota_`);
+
+  return lines.join('\n');
+};

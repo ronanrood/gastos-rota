@@ -191,7 +191,7 @@ export const DashboardPage: React.FC = () => {
     };
   }, [user, filterState, profile]);
 
-  const { periodLabel, paymentNotice } = calculateFilterDateRange(filterState, profile);
+  const { periodLabel, paymentNotice, startDate, endDate } = calculateFilterDateRange(filterState, profile);
 
   // Cálculos consolidados dos 4 Cards Principais
   // a) Faturamento Bruto
@@ -827,6 +827,11 @@ export const DashboardPage: React.FC = () => {
         vehicle={vehicle}
         periodLabel={periodLabel}
         paymentNotice={paymentNotice}
+        earningsItems={earnings}
+        fuelItems={fuelLogs}
+        maintenanceItems={maintenanceLogs}
+        startDate={startDate}
+        endDate={endDate}
         dashboardData={{
           faturamentoBruto,
           despesasCombustivel,

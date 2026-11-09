@@ -346,6 +346,8 @@ export const EarningsFilterSummary: React.FC<EarningsFilterSummaryProps> = ({
         periodLabel={periodLabel}
         paymentNotice={paymentNotice}
         earningsItems={items}
+        startDate={startDate}
+        endDate={endDate}
       />
     </>
   );
