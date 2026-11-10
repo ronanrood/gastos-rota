@@ -2,7 +2,7 @@ import React, { useEffect, useState, useTransition } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { Profile } from '../types/database';
-import { AuthContext } from './authContextDef';
+import { AuthContext, type SignUpMetadata } from './authContextDef';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -133,10 +133,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (nome: string, email: string, password: string) => {
+  const signUp = async (
+    nome: string,
+    email: string,
+    password: string,
+    metadata?: SignUpMetadata
+  ) => {
     try {
       const trimmedEmail = email.trim();
       const trimmedNome = nome.trim();
+      const trimmedTelefone = metadata?.telefone?.trim() || null;
+      const trimmedTransportadora = metadata?.transportadora?.trim() || null;
+      const trimmedRota = metadata?.rota?.trim() || null;
 
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
@@ -144,6 +152,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             nome: trimmedNome,
+            telefone: trimmedTelefone,
+            transportadora: trimmedTransportadora,
+            rota: trimmedRota,
           },
         },
       });
@@ -158,6 +169,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: data.user.id,
             nome: trimmedNome,
             email: trimmedEmail,
+            telefone: trimmedTelefone,
+            transportadora: trimmedTransportadora,
+            rota: trimmedRota,
             role: 'driver',
             status: 'active',
           });
