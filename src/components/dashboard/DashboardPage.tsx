@@ -33,6 +33,7 @@ import {
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
 import { PaymentCyclesHistory } from '../payment/PaymentCyclesHistory';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
+import { triggerGoalCelebration } from '../../lib/celebrate';
 import { FilterShareActions } from '../export/FilterShareActions';
 import { ReportPrintModal } from '../export/ReportPrintModal';
 import { generateWhatsAppDashboardText } from '../../utils/exportUtils';
@@ -285,6 +286,37 @@ export const DashboardPage: React.FC = () => {
     }
     return 0;
   }, [lucroLiquidoReal, totalKmRodados]);
+
+  // Meta Financeira configurada (armazenada em localStorage ou padrão R$ 3.500)
+  const savedMonthlyGoal = useMemo(() => {
+    if (typeof window === 'undefined') return 3500;
+    const val = localStorage.getItem('gastos_rota_meta_liquida');
+    return val ? parseFloat(val) || 3500 : 3500;
+  }, []);
+
+  // Se o filtro ativo for de quinzena, a meta proporcional é a metade
+  const targetPeriodGoal = useMemo(() => {
+    if (filterState.periodChip === 'quinzena_1' || filterState.periodChip === 'quinzena_2') {
+      return savedMonthlyGoal / 2;
+    }
+    return savedMonthlyGoal;
+  }, [filterState.periodChip, savedMonthlyGoal]);
+
+  const valorProgressoMeta = lucroLiquidoReal > 0 ? lucroLiquidoReal : faturamentoBruto;
+  const percentualMetaDashboard = targetPeriodGoal > 0 ? (valorProgressoMeta / targetPeriodGoal) * 100 : 0;
+  const isMetaDashboardBatida = percentualMetaDashboard >= 100 && valorProgressoMeta > 0;
+  const excedenteDashboard = Math.max(0, valorProgressoMeta - targetPeriodGoal);
+
+  // Celebração na sessão ao atingir ou superar a meta no Dashboard
+  useEffect(() => {
+    if (isMetaDashboardBatida) {
+      const sessionKey = `celebrated_dashboard_goal_${filterState.monthYear}_${filterState.periodChip}`;
+      if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true');
+        triggerGoalCelebration();
+      }
+    }
+  }, [isMetaDashboardBatida, filterState.monthYear, filterState.periodChip]);
 
   // Agrupamento diário para o Gráfico de Barras
   const dailyBarData = useMemo(() => {
@@ -611,6 +643,107 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
         </motion.div>
+      </motion.div>
+
+      {/* CARD DE PROGRESSO DA META FINANCEIRA */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15, duration: 0.25 }}
+        className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 relative overflow-hidden backdrop-blur-md shadow-lg ${
+          isMetaDashboardBatida
+            ? 'bg-gradient-to-br from-amber-950/80 via-slate-900 to-emerald-950/40 border-amber-400/80 shadow-amber-500/20 ring-1 ring-amber-400/40'
+            : 'bg-slate-900/90 border-slate-800'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-800/80">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 ${
+                isMetaDashboardBatida
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+              }`}
+            >
+              {isMetaDashboardBatida ? '🏆' : <Sparkles className="w-4 h-4 text-emerald-400" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+                  {isMetaDashboardBatida ? 'Meta Batida no Período!' : 'Progresso da Meta Financeira'}
+                </h4>
+                {isMetaDashboardBatida && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950 uppercase tracking-wider">
+                    Concluído
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                {filterState.periodChip === 'quinzena_1'
+                  ? 'Meta da 1ª Quinzena'
+                  : filterState.periodChip === 'quinzena_2'
+                  ? 'Meta da 2ª Quinzena'
+                  : 'Meta do Período'} • Meta: {formatCurrency(targetPeriodGoal)}
+              </p>
+            </div>
+          </div>
+
+          <div className="text-left sm:text-right">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">
+              Progresso
+            </span>
+            <span
+              className={`text-xl sm:text-2xl font-black font-mono ${
+                isMetaDashboardBatida ? 'text-amber-400' : 'text-emerald-400'
+              }`}
+            >
+              <AnimatedCounter value={percentualMetaDashboard} decimals={1} suffix="%" />
+            </span>
+          </div>
+        </div>
+
+        {/* Barra de Progresso Animada com framer-motion */}
+        <div className="pt-3 space-y-1.5">
+          <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+            <span className="text-slate-300 font-medium">
+              Acumulado no período:{' '}
+              <strong className="text-white font-mono">{formatCurrency(valorProgressoMeta)}</strong>
+            </span>
+            <span className="text-slate-400 font-mono text-[11px]">
+              Alvo: {formatCurrency(targetPeriodGoal)}
+            </span>
+          </div>
+
+          <div className="w-full bg-slate-950/80 rounded-full h-3 p-0.5 border border-slate-800 overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(percentualMetaDashboard, 100)}%` }}
+              transition={{ type: 'spring', stiffness: 200, damping: 24 }}
+              className={`h-full rounded-full ${
+                isMetaDashboardBatida
+                  ? 'bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400 shadow-sm shadow-amber-400/30'
+                  : 'bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-400'
+              }`}
+            />
+          </div>
+
+          {isMetaDashboardBatida && (
+            <div className="mt-2 pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <span className="text-amber-200 font-extrabold flex items-center gap-1.5">
+                <span>🎉</span>
+                <span>Parabéns! Você superou sua meta em +{formatCurrency(excedenteDashboard)}!</span>
+              </span>
+              <motion.button
+                whileTap={{ scale: 0.94 }}
+                type="button"
+                onClick={() => triggerGoalCelebration()}
+                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition cursor-pointer self-start sm:self-center shadow-xs"
+              >
+                Comemorar 🎉
+              </motion.button>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {/* AVISO INFORMATIVO: ORÇAMENTOS PENDENTES (Não abatem do Lucro Líquido) */}

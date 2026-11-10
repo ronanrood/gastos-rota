@@ -15,6 +15,7 @@ import { supabase } from '../../lib/supabase';
 import type { PaymentCycleRecord, PaymentCycleUpsert } from '../../types/database';
 import { type PaymentCycleInfo, getLocalDateString } from '../../utils/paymentCycles';
 import { modalBackdropVariants, modalContentVariants } from '../common/MotionVariants';
+import { triggerSuccessCelebration } from '../../lib/celebrate';
 
 interface ConfirmPaymentModalProps {
   isOpen: boolean;
@@ -74,6 +75,7 @@ const ConfirmPaymentForm: React.FC<InnerFormProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isConfirmingRevert, setIsConfirmingRevert] = useState(false);
+  const [successRecord, setSuccessRecord] = useState<PaymentCycleRecord | null>(null);
 
   const parsedCalculated = cycle.totalFaturamento;
   const parsedRecebido = parseFloat(valorRecebido.replace(',', '.')) || 0;
@@ -124,8 +126,14 @@ const ConfirmPaymentForm: React.FC<InnerFormProps> = ({
         throw error;
       }
 
-      onSaveSuccess(data as PaymentCycleRecord);
-      onClose();
+      const record = data as PaymentCycleRecord;
+      setSuccessRecord(record);
+      triggerSuccessCelebration();
+
+      setTimeout(() => {
+        onSaveSuccess(record);
+        onClose();
+      }, 2100);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao registrar confirmação do pagamento.';
       setErrorMsg(message);
@@ -173,6 +181,70 @@ const ConfirmPaymentForm: React.FC<InnerFormProps> = ({
       setIsConfirmingRevert(false);
     }
   };
+
+  if (successRecord) {
+    return (
+      <div className="bg-slate-900 border border-emerald-500/40 rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-2xl relative text-center flex flex-col items-center justify-center space-y-4 overflow-hidden">
+        {/* Glow de fundo */}
+        <div className="absolute inset-0 bg-emerald-500/10 rounded-3xl blur-2xl pointer-events-none" />
+
+        <div className="relative my-2">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+            className="w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto"
+          >
+            <svg className="w-12 h-12 text-emerald-400" viewBox="0 0 52 52">
+              <motion.circle
+                cx="26"
+                cy="26"
+                r="22"
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="3.5"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 0.45, ease: 'easeOut' }}
+              />
+              <motion.path
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M14 27l8 8 16-16"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 18, delay: 0.18 }}
+              />
+            </svg>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.28 }}
+          className="space-y-1 relative z-10"
+        >
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold mb-1">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Confirmado com Sucesso</span>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            Pagamento Confirmado!
+          </h3>
+          <p className="text-xl sm:text-2xl font-black text-emerald-400 font-mono">
+            {formatCurrency(successRecord.valor_recebido ?? cycle.totalFaturamento)} na conta 🎉
+          </p>
+          <p className="text-xs text-slate-400 pt-1">
+            {cycle.cycleName} • {cycle.corteLabel}
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[92vh] flex flex-col">

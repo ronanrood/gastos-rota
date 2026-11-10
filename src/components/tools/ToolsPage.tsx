@@ -24,6 +24,7 @@ import type { Vehicle, FuelType, FuelLog } from '../../types/database';
 import { formatCurrency } from '../../utils/exportUtils';
 import { QuickFuelModal } from './QuickFuelModal';
 import { AnimatedCounter } from '../common/AnimatedCounter';
+import { triggerGoalCelebration } from '../../lib/celebrate';
 
 export const ToolsPage: React.FC = () => {
   const { user } = useAuth();
@@ -104,12 +105,41 @@ export const ToolsPage: React.FC = () => {
   const [rotaBonusExtra, setRotaBonusExtra] = useState<string>('0');
 
   // 3. Estado da Ferramenta 3: Meta de Ganhos e Peças
-  const [metaLiquida, setMetaLiquida] = useState<string>('3500');
+  const [metaLiquida, setMetaLiquida] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gastos_rota_meta_liquida') || '3500';
+    }
+    return '3500';
+  });
   const [metaDiasTrabalho, setMetaDiasTrabalho] = useState<string>('12');
   const [metaKmDia, setMetaKmDia] = useState<string>('90');
   const [metaValorPeca, setMetaValorPeca] = useState<string>('4.50');
   const [metaPrecoCombustivel, setMetaPrecoCombustivel] = useState<string>('5.89');
   const [metaConsumoKml, setMetaConsumoKml] = useState<string>('11.0');
+
+  // Produção real acumulada no mês corrente para comparação de meta
+  const [currentMonthAccumulated, setCurrentMonthAccumulated] = useState<{
+    faturamento: number;
+    pecas: number;
+    combustivel: number;
+    lucroLiquido: number;
+    diasTrabalhados: number;
+  }>({
+    faturamento: 0,
+    pecas: 0,
+    combustivel: 0,
+    lucroLiquido: 0,
+    diasTrabalhados: 0,
+  });
+
+  const handleUpdateMetaLiquida = (val: string) => {
+    setMetaLiquida(val);
+    try {
+      localStorage.setItem('gastos_rota_meta_liquida', val);
+    } catch {
+      // ignore
+    }
+  };
 
   // 4. Estado da Ferramenta 4: Custo Real por KM
   const [custoCombustivelKmLitro, setCustoCombustivelKmLitro] = useState<string>('5.89');
@@ -209,6 +239,52 @@ export const ToolsPage: React.FC = () => {
           setPrecoGnv(lastGnvLog.preco_por_litro_ou_m3.toFixed(2));
         }
       }
+
+      // 4. Busca acumulado do mês atual para a Meta Financeira
+      const now = new Date();
+      const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const startMonthStr = `${currentMonthStr}-01`;
+      const endMonthStr = `${currentMonthStr}-31`;
+
+      const { data: monthEarnings } = await supabase
+        .from('daily_earnings')
+        .select('faturamento_bruto, qtd_pecas, valor_unitario_peca, valor_extra_bonus')
+        .eq('user_id', user.id)
+        .gte('data', startMonthStr)
+        .lte('data', endMonthStr);
+
+      const { data: monthFuels } = await supabase
+        .from('fuel_logs')
+        .select('valor_total_abastecido')
+        .eq('user_id', user.id)
+        .gte('data', startMonthStr)
+        .lte('data', endMonthStr);
+
+      if (!isCurrent) return;
+
+      const faturamento = (monthEarnings || []).reduce((acc, curr) => {
+        const val =
+          typeof curr.faturamento_bruto === 'number'
+            ? curr.faturamento_bruto
+            : curr.qtd_pecas * curr.valor_unitario_peca + curr.valor_extra_bonus;
+        return acc + val;
+      }, 0);
+
+      const pecas = (monthEarnings || []).reduce((acc, curr) => acc + (curr.qtd_pecas || 0), 0);
+      const combustivel = (monthFuels || []).reduce(
+        (acc, curr) => acc + (curr.valor_total_abastecido || 0),
+        0
+      );
+      const lucroLiquido = faturamento - combustivel;
+      const diasTrabalhados = (monthEarnings || []).length;
+
+      setCurrentMonthAccumulated({
+        faturamento,
+        pecas,
+        combustivel,
+        lucroLiquido,
+        diasTrabalhados,
+      });
     } catch (err) {
       if (isCurrent) {
         console.error('Erro ao buscar dados para calculadoras:', err);
@@ -418,6 +494,36 @@ export const ToolsPage: React.FC = () => {
     metaPrecoCombustivel,
     metaConsumoKml,
   ]);
+
+  // Comparativo da Meta com a Produção Real Acumulada no Mês Corrente
+  const metaAlvo = useMemo(() => parseFloat(metaLiquida) || 3500, [metaLiquida]);
+  const acumuladoPeriodo = useMemo(() => {
+    return currentMonthAccumulated.lucroLiquido > 0
+      ? currentMonthAccumulated.lucroLiquido
+      : currentMonthAccumulated.faturamento;
+  }, [currentMonthAccumulated]);
+
+  const percentualMeta = useMemo(() => {
+    return metaAlvo > 0 ? (acumuladoPeriodo / metaAlvo) * 100 : 0;
+  }, [acumuladoPeriodo, metaAlvo]);
+
+  const isMetaBatida = percentualMeta >= 100 && acumuladoPeriodo > 0;
+  const excedenteMeta = Math.max(0, acumuladoPeriodo - metaAlvo);
+  const valorUnitarioPecaNum = parseFloat(metaValorPeca) || 4.5;
+  const excedentePecas = valorUnitarioPecaNum > 0 ? Math.round(excedenteMeta / valorUnitarioPecaNum) : 0;
+
+  // Celebração de meta batida disparada uma única vez por mês na sessão
+  useEffect(() => {
+    if (isMetaBatida && acumuladoPeriodo > 0) {
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const sessionKey = `celebrated_tools_goal_${monthKey}`;
+      if (typeof window !== 'undefined' && !sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true');
+        triggerGoalCelebration();
+      }
+    }
+  }, [isMetaBatida, acumuladoPeriodo]);
 
   // ==========================================
   // CÁLCULOS DA FERRAMENTA 4: CUSTO REAL POR KM
@@ -1231,7 +1337,7 @@ export const ToolsPage: React.FC = () => {
                     step="50"
                     min="100"
                     value={metaLiquida}
-                    onChange={(e) => setMetaLiquida(e.target.value)}
+                    onChange={(e) => handleUpdateMetaLiquida(e.target.value)}
                     className="w-full pl-9 pr-3 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-emerald-400 font-mono font-black text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
@@ -1338,22 +1444,88 @@ export const ToolsPage: React.FC = () => {
             </div>
 
             {/* RESULTADO DA META EM DESTAQUE */}
-            <div className="bg-gradient-to-br from-amber-950/70 via-slate-900 to-slate-950 border-2 border-amber-500/60 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block">
-                  Sua Meta Diária de Produção
-                </span>
-                <div className="text-3xl sm:text-4xl font-black text-white mt-1">
-                  {goalCalc.pecasPorDia}{' '}
-                  <span className="text-lg font-normal text-slate-300">peças por dia</span>
+            <div
+              className={`rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 transition-all duration-300 relative overflow-hidden ${
+                isMetaBatida
+                  ? 'bg-gradient-to-br from-amber-950/80 via-slate-900 to-emerald-950/40 border-2 border-amber-400/80 shadow-amber-500/20'
+                  : 'bg-gradient-to-br from-amber-950/70 via-slate-900 to-slate-950 border-2 border-amber-500/60'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block">
+                    Sua Meta Diária de Produção
+                  </span>
+                  <div className="text-3xl sm:text-4xl font-black text-white mt-1">
+                    {goalCalc.pecasPorDia}{' '}
+                    <span className="text-lg font-normal text-slate-300">peças por dia</span>
+                  </div>
+                  <p className="text-xs text-amber-300 font-bold mt-1">
+                    Faturamento Bruto Diário Necessário: {formatCurrency(goalCalc.faturamentoBrutoDia)}/dia
+                  </p>
                 </div>
-                <p className="text-xs text-amber-300 font-bold mt-1">
-                  Faturamento Bruto Diário Necessário: {formatCurrency(goalCalc.faturamentoBrutoDia)}/dia
-                </p>
+
+                <div className="self-start sm:self-center">
+                  {isMetaBatida ? (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black shadow-xs">
+                      <span className="text-sm">🏆</span>
+                      <span>Meta do Mês Batida!</span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700 text-xs font-semibold">
+                      <span>Progresso: {percentualMeta.toFixed(0)}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* BARRA DE PROGRESSO ANIMADA (FRAMER-MOTION) */}
+              <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                  <span className="text-slate-300 font-medium">
+                    Acumulado no mês:{' '}
+                    <strong className="text-white font-mono">{formatCurrency(acumuladoPeriodo)}</strong>
+                  </span>
+                  <span className="text-xs font-mono font-bold text-amber-400">
+                    {percentualMeta.toFixed(1)}% da meta ({formatCurrency(metaAlvo)})
+                  </span>
+                </div>
+
+                <div className="w-full bg-slate-900 rounded-full h-3 p-0.5 border border-slate-800/80 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(percentualMeta, 100)}%` }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 24 }}
+                    className={`h-full rounded-full ${
+                      isMetaBatida
+                        ? 'bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400 shadow-sm shadow-amber-400/30'
+                        : 'bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-400'
+                    }`}
+                  />
+                </div>
+
+                {isMetaBatida && (
+                  <div className="mt-2 pt-2 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <p className="text-xs text-amber-300 font-extrabold flex items-center gap-1.5">
+                      <span>🎉</span>
+                      <span>
+                        Você superou sua meta em +{formatCurrency(excedenteMeta)} (+{excedentePecas} peças)!
+                      </span>
+                    </p>
+                    <motion.button
+                      whileTap={{ scale: 0.94 }}
+                      type="button"
+                      onClick={() => triggerGoalCelebration()}
+                      className="px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] transition cursor-pointer self-start sm:self-center shadow-xs"
+                    >
+                      Celebrar 🎊
+                    </motion.button>
+                  </div>
+                )}
               </div>
 
               {/* Detalhes Diários */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">
                     Seu Lucro Limpo Diário

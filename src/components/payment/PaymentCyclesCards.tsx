@@ -7,6 +7,7 @@ import { computePaymentCycles, type PaymentCycleInfo } from '../../utils/payment
 import { PaymentConfigModal } from './PaymentConfigModal';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
 import { AnimatedCounter } from '../common/AnimatedCounter';
+import { triggerSuccessCelebration } from '../../lib/celebrate';
 import {
   CalendarDays,
   Calendar,
@@ -63,6 +64,14 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [selectedCycleDetails, setSelectedCycleDetails] = useState<PaymentCycleInfo | null>(null);
   const [cycleToConfirm, setCycleToConfirm] = useState<PaymentCycleInfo | null>(null);
+  const [recentlyPaidKey, setRecentlyPaidKey] = useState<string | null>(null);
+
+  // Lê a meta financeira configurada (padrão R$ 3.500)
+  const savedGoal = useMemo(() => {
+    if (typeof window === 'undefined') return 3500;
+    const val = localStorage.getItem('gastos_rota_meta_liquida');
+    return val ? parseFloat(val) || 3500 : 3500;
+  }, []);
 
   // Registros locais de ciclos de pagamento (caso não venham por props)
   const [internalRecords, setInternalRecords] = useState<PaymentCycleRecord[]>([]);
@@ -108,7 +117,27 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
     return computePaymentCycles(earnings, profile, activeMonthStr, activeRecords);
   }, [earnings, profile, activeMonthStr, activeRecords]);
 
+  // Celebração discreta caso o ciclo ativo atinja a meta pela 1ª vez nesta sessão
+  useEffect(() => {
+    const currentHit = cycles.find((c) => {
+      const target = tipo === 'quinzenal' ? savedGoal / 2 : savedGoal;
+      return c.isCurrent && c.totalFaturamento >= target && target > 0;
+    });
+    if (currentHit && typeof window !== 'undefined') {
+      const sessionKey = `celebrated_cycle_${currentHit.referenciaChave}`;
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true');
+        triggerSuccessCelebration();
+      }
+    }
+  }, [cycles, tipo, savedGoal]);
+
   const handleSavePaymentSuccess = (updatedRecord: PaymentCycleRecord) => {
+    setRecentlyPaidKey(updatedRecord.referencia_chave);
+    setTimeout(() => {
+      setRecentlyPaidKey(null);
+    }, 6000);
+
     setInternalRecords((prev) => {
       const exists = prev.some((r) => r.referencia_chave === updatedRecord.referencia_chave);
       if (exists) {
@@ -187,6 +216,13 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
             const isPaid = cycle.status === 'pago';
             const isLate = cycle.status === 'atrasado';
             const rec = cycle.paymentRecord;
+            const isHighlighted = recentlyPaidKey === cycle.referenciaChave;
+
+            // Metas do Ciclo
+            const cycleTarget = tipo === 'quinzenal' ? savedGoal / 2 : savedGoal;
+            const cycleProgress = cycleTarget > 0 ? (cycle.totalFaturamento / cycleTarget) * 100 : 0;
+            const isGoalHit = cycleProgress >= 100;
+            const goalSurplus = Math.max(0, cycle.totalFaturamento - cycleTarget);
 
             return (
               <div
@@ -199,9 +235,13 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
                     setSelectedCycleDetails(cycle);
                   }
                 }}
-                className={`group text-left p-4 sm:p-5 rounded-3xl border transition-all duration-200 cursor-pointer relative overflow-hidden backdrop-blur-md shadow-lg hover:shadow-xl flex flex-col justify-between ${
-                  isPaid
-                    ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border-emerald-500/40 hover:border-emerald-500/60'
+                className={`group text-left p-4 sm:p-5 rounded-3xl border transition-all duration-300 cursor-pointer relative overflow-hidden backdrop-blur-md shadow-lg hover:shadow-xl flex flex-col justify-between ${
+                  isHighlighted
+                    ? 'bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 border-emerald-400 ring-2 ring-emerald-500/80 shadow-lg shadow-emerald-500/30'
+                    : isPaid
+                    ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border-emerald-500/50 hover:border-emerald-500/70 ring-2 ring-emerald-500/50 shadow-emerald-500/15'
+                    : isGoalHit
+                    ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 border-amber-500/40 hover:border-amber-500/60 ring-1 ring-amber-500/30'
                     : isLate
                     ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/30 border-rose-500/40 hover:border-rose-500/60 ring-1 ring-rose-500/20'
                     : cycle.isCurrent || (isFirst && tipo === 'quinzenal')
@@ -309,6 +349,43 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
                       {cycle.entries.length}{' '}
                       {cycle.entries.length === 1 ? 'dia lançado' : 'dias lançados'}
                     </span>
+                  </div>
+
+                  {/* BARRA DE PROGRESSO DA META FINANCEIRA */}
+                  <div className="mt-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400 flex items-center gap-1 font-medium">
+                        {isGoalHit ? (
+                          <span className="text-amber-400 font-bold flex items-center gap-1">
+                            🏆 Meta Batida!
+                          </span>
+                        ) : (
+                          <span>Progresso da Meta ({formatCurrency(cycleTarget)})</span>
+                        )}
+                      </span>
+                      <span className={`font-mono font-bold ${isGoalHit ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        {cycleProgress.toFixed(0)}%
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(cycleProgress, 100)}%` }}
+                        transition={{ type: 'spring', stiffness: 220, damping: 25 }}
+                        className={`h-full rounded-full ${
+                          isGoalHit
+                            ? 'bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400'
+                            : 'bg-gradient-to-r from-teal-500 to-emerald-400'
+                        }`}
+                      />
+                    </div>
+
+                    {isGoalHit && (
+                      <div className="text-[11px] text-emerald-300 font-semibold flex items-center justify-between pt-0.5">
+                        <span>🎉 Superou a meta em +{formatCurrency(goalSurplus)}!</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
