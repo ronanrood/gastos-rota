@@ -21,11 +21,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
-import type { Vehicle, FuelType, FuelLog } from '../../types/database';
+import type { Vehicle, FuelType, FuelLog, DailyEarning } from '../../types/database';
 import { formatCurrency } from '../../utils/exportUtils';
 import { QuickFuelModal } from './QuickFuelModal';
+import { QuickEarningsModal } from './QuickEarningsModal';
 import { AnimatedCounter } from '../common/AnimatedCounter';
-import { triggerGoalCelebration } from '../../lib/celebrate';
+import { triggerGoalCelebration, triggerSuccessCelebration } from '../../lib/celebrate';
 import { VehicleHealthPanel } from './VehicleHealthPanel';
 
 export const ToolsPage: React.FC = () => {
@@ -129,6 +130,38 @@ export const ToolsPage: React.FC = () => {
   const [rotaPrecoCombustivel, setRotaPrecoCombustivel] = useState<string>('5.89');
   const [rotaConsumoKml, setRotaConsumoKml] = useState<string>('11.0');
   const [rotaBonusExtra, setRotaBonusExtra] = useState<string>('0');
+
+  // Estado do Modal de Lançamento Rápido de Rota nos Ganhos Diários (Ferramenta 2)
+  const [isQuickEarningsOpen, setIsQuickEarningsOpen] = useState(false);
+  const [quickEarningsToast, setQuickEarningsToast] = useState<{
+    qtdPecas: number;
+    faturamentoBruto: number;
+    data: string;
+  } | null>(null);
+
+  // Auto-dismiss do Toast de sucesso de ganho
+  useEffect(() => {
+    if (!quickEarningsToast) return;
+    const timer = setTimeout(() => {
+      setQuickEarningsToast(null);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [quickEarningsToast]);
+
+  const handleQuickEarningsSuccess = (inserted: DailyEarning, updatedVehicleKm?: number) => {
+    if (updatedVehicleKm && vehicle) {
+      setVehicle((prev) => (prev ? { ...prev, km_atual: updatedVehicleKm } : null));
+    }
+    triggerSuccessCelebration();
+    const bruto =
+      inserted.faturamento_bruto ||
+      inserted.qtd_pecas * inserted.valor_unitario_peca + (inserted.valor_extra_bonus || 0);
+    setQuickEarningsToast({
+      qtdPecas: inserted.qtd_pecas,
+      faturamentoBruto: bruto,
+      data: inserted.data,
+    });
+  };
 
   // 3. Estado da Ferramenta 3: Meta de Ganhos e Peças
   const [metaLiquida, setMetaLiquida] = useState<string>(() => {
@@ -1343,6 +1376,18 @@ export const ToolsPage: React.FC = () => {
                   📦 As primeiras <strong className="text-amber-400 font-mono">{routeCalc.pecasPagarCombustivel} peças</strong> desta rota pagam o combustível. As outras <strong className="text-emerald-400 font-mono">{routeCalc.pecasLucroLivre} peças</strong> são o seu lucro limpo no bolso!
                 </span>
               </div>
+
+              {/* Botão de Ação Rápida: Lançar nos Ganhos Diários */}
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                type="button"
+                onClick={() => setIsQuickEarningsOpen(true)}
+                className="w-full mt-4 h-12 min-h-[48px] rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-400 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xl shadow-blue-500/25 border border-blue-400/30 transition cursor-pointer"
+              >
+                <Package className="w-5 h-5 shrink-0" />
+                <span>📦 Realizei essa rota -&gt; Lançar nos Ganhos Diários</span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </motion.button>
             </div>
           </div>
         </section>
@@ -1863,6 +1908,22 @@ export const ToolsPage: React.FC = () => {
         />
       )}
 
+      {/* MODAL DE LANÇAMENTO RÁPIDO DE ROTA (SIMULADOR DE VIABILIDADE) */}
+      {isQuickEarningsOpen && (
+        <QuickEarningsModal
+          key={`${rotaQtdPecas}-${rotaValorPeca}-${rotaBonusExtra}-${rotaDistanciaKm}`}
+          isOpen={isQuickEarningsOpen}
+          onClose={() => setIsQuickEarningsOpen(false)}
+          initialQtdPecas={rotaQtdPecas}
+          initialValorPeca={rotaValorPeca}
+          initialBonusExtra={rotaBonusExtra}
+          initialDistanciaKm={rotaDistanciaKm}
+          simulatedLucroLiquido={routeCalc.lucroLiquido}
+          vehicle={vehicle}
+          onSuccess={handleQuickEarningsSuccess}
+        />
+      )}
+
       {/* TOAST DE SUCESSO DO ABASTECIMENTO */}
       <AnimatePresence>
         {quickFuelToast && (
@@ -1898,6 +1959,52 @@ export const ToolsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setQuickFuelToast(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                aria-label="Fechar aviso"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TOAST DE SUCESSO DO LANÇAMENTO DE ROTA */}
+      <AnimatePresence>
+        {quickEarningsToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md bg-blue-950/95 border border-blue-500/60 rounded-2xl p-4 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-black text-white truncate">
+                  Rota lançada nos Ganhos com sucesso!
+                </p>
+                <p className="text-[11px] sm:text-xs text-blue-300 truncate">
+                  {quickEarningsToast.qtdPecas} peças • {formatCurrency(quickEarningsToast.faturamentoBruto)}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <motion.a
+                whileTap={{ scale: 0.94 }}
+                href="#inicio"
+                className="px-3 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-black transition cursor-pointer whitespace-nowrap flex items-center gap-1"
+              >
+                <span>Ver Fechamento</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </motion.a>
+              <button
+                type="button"
+                onClick={() => setQuickEarningsToast(null)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
                 aria-label="Fechar aviso"
               >
