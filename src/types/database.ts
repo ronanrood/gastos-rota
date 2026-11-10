@@ -27,6 +27,8 @@ export interface Profile {
   dia_pagamento_2?: number | null;
   corte_2_inicio?: number | null;
   corte_2_fim?: number | null;
+  onboarding_completed?: boolean | null;
+  valor_padrao_peca?: number | null;
   created_at?: string;
 }
 

@@ -14,6 +14,8 @@ import { ProfilePage } from './components/profile/ProfilePage';
 import { ToolsPage } from './components/tools/ToolsPage';
 import { AdminPage } from './components/admin/AdminPage';
 import { PageTransition } from './components/common/PageTransition';
+import { OnboardingModal } from './components/onboarding/OnboardingModal';
+import { supabase } from './lib/supabase';
 import { Truck, ShieldAlert, LogOut } from 'lucide-react';
 
 const VIEW_TO_HASH: Record<ViewType, string> = {
@@ -70,8 +72,42 @@ const resolveViewFromLocation = (): ViewType => {
 };
 
 const MainContent: React.FC = () => {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>(() => resolveViewFromLocation());
+
+  // Controle do Onboarding Rápido (3 Passos)
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user || loading || !profile) return;
+
+    // Se o usuário pulou nesta sessão ou já concluiu o onboarding
+    if (sessionStorage.getItem('gastos_rota_onboarding_skipped') === 'true') {
+      return;
+    }
+    if (profile.onboarding_completed === true) {
+      return;
+    }
+
+    // Se onboarding_completed for false (ou null/undefined), checa se já possui veículo cadastrado
+    const checkNeedOnboarding = async () => {
+      try {
+        const { data: veh } = await supabase
+          .from('vehicles')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!veh || profile.onboarding_completed === false) {
+          setIsOnboardingOpen(true);
+        }
+      } catch (err) {
+        console.warn('Erro ao verificar status de onboarding:', err);
+      }
+    };
+
+    checkNeedOnboarding();
+  }, [user, profile, loading]);
 
   // Sincroniza estado da visualização com a hash e histórico de navegação da URL
   useEffect(() => {
@@ -154,20 +190,36 @@ const MainContent: React.FC = () => {
   }
 
   return (
-    <AppLayout currentView={effectiveView} onSelectView={handleSelectView}>
-      <AnimatePresence mode="wait">
-        <PageTransition key={effectiveView}>
-          {effectiveView === 'earnings' && <DailyEarningsPage />}
-          {effectiveView === 'dashboard' && <DashboardPage />}
-          {effectiveView === 'fuel' && <FuelPage />}
-          {effectiveView === 'maintenance' && <MaintenancePage />}
-          {effectiveView === 'vehicle' && <VehiclePage />}
-          {effectiveView === 'tools' && <ToolsPage />}
-          {effectiveView === 'profile' && <ProfilePage />}
-          {effectiveView === 'admin' && <AdminPage />}
-        </PageTransition>
-      </AnimatePresence>
-    </AppLayout>
+    <>
+      <AppLayout currentView={effectiveView} onSelectView={handleSelectView}>
+        <AnimatePresence mode="wait">
+          <PageTransition key={effectiveView}>
+            {effectiveView === 'earnings' && <DailyEarningsPage />}
+            {effectiveView === 'dashboard' && <DashboardPage />}
+            {effectiveView === 'fuel' && <FuelPage />}
+            {effectiveView === 'maintenance' && <MaintenancePage />}
+            {effectiveView === 'vehicle' && <VehiclePage />}
+            {effectiveView === 'tools' && <ToolsPage />}
+            {effectiveView === 'profile' && <ProfilePage />}
+            {effectiveView === 'admin' && <AdminPage />}
+          </PageTransition>
+        </AnimatePresence>
+      </AppLayout>
+
+      {/* Modal de Onboarding Rápido (3 Passos) */}
+      {isOnboardingOpen && user && (
+        <OnboardingModal
+          isOpen={isOnboardingOpen}
+          onClose={() => setIsOnboardingOpen(false)}
+          user={user}
+          profile={profile}
+          onComplete={async () => {
+            await refreshProfile();
+            setIsOnboardingOpen(false);
+          }}
+        />
+      )}
+    </>
   );
 };
 

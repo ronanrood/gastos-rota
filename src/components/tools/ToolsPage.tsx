@@ -30,7 +30,7 @@ import { triggerGoalCelebration, triggerSuccessCelebration } from '../../lib/cel
 import { VehicleHealthPanel } from './VehicleHealthPanel';
 
 export const ToolsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // Aba ativa: 'combustivel' | 'viabilidade' | 'metas' | 'custo_km' | 'saude'
   const [activeTab, setActiveTab] = useState<
@@ -244,7 +244,12 @@ export const ToolsPage: React.FC = () => {
         }
       }
 
-      // 2. Busca o último valor por peça e média de KM em daily_earnings
+      // 2. Busca o último valor por peça e média de KM em daily_earnings (ou padrão do perfil)
+      if (profile?.valor_padrao_peca && profile.valor_padrao_peca > 0) {
+        setRotaValorPeca(profile.valor_padrao_peca.toFixed(2));
+        setMetaValorPeca(profile.valor_padrao_peca.toFixed(2));
+      }
+
       const { data: lastEarnings } = await supabase
         .from('daily_earnings')
         .select('valor_unitario_peca, km_rodado')
@@ -349,7 +354,7 @@ export const ToolsPage: React.FC = () => {
         console.error('Erro ao buscar dados para calculadoras:', err);
       }
     }
-  }, [user]);
+  }, [user, profile]);
 
   // Efeito de inicialização
   useEffect(() => {

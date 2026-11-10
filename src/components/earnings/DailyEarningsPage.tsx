@@ -60,7 +60,9 @@ export const DailyEarningsPage: React.FC = () => {
   // Formulário - inicialização pura
   const [data, setData] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [qtdPecas, setQtdPecas] = useState<string>('');
-  const [valorUnitarioPeca, setValorUnitarioPeca] = useState<string>('');
+  const [valorUnitarioPeca, setValorUnitarioPeca] = useState<string>(() =>
+    profile?.valor_padrao_peca ? profile.valor_padrao_peca.toString() : ''
+  );
   const [valorExtraBonus, setValorExtraBonus] = useState<string>('0');
   const [kmRodado, setKmRodado] = useState<string>('');
   const [observacoes, setObservacoes] = useState<string>('');
@@ -280,6 +282,9 @@ export const DailyEarningsPage: React.FC = () => {
           if (paymentCyclesRes.data) {
             setPaymentRecords(paymentCyclesRes.data as PaymentCycleRecord[]);
           }
+          if (profile?.valor_padrao_peca) {
+            setValorUnitarioPeca((curr) => curr || profile.valor_padrao_peca!.toString());
+          }
         }
       } catch (err) {
         if (!ignore) console.error('Falha na requisição de ganhos:', err);
@@ -293,7 +298,7 @@ export const DailyEarningsPage: React.FC = () => {
     return () => {
       ignore = true;
     };
-  }, [user]);
+  }, [user, profile?.valor_padrao_peca]);
 
   // Submissão do lançamento diário
   const handleSubmit = async (e: React.FormEvent) => {
