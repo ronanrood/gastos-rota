@@ -56,6 +56,8 @@ const resolveViewFromLocation = (): ViewType => {
     case 'tools':
     case 'ferramentas':
     case 'calculadoras':
+    case 'saude':
+    case 'tools-saude':
       return 'tools';
     case 'admin':
       return 'admin';

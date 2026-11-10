@@ -40,6 +40,21 @@ export interface ProfilePaymentConfig {
   corte_2_fim?: number | null;
 }
 
+export interface PreventiveMaintenanceItem {
+  nome: string;
+  intervalo_km: number;
+  ultimo_km: number;
+  ultima_data: string;
+}
+
+export interface PreventiveMaintenanceData {
+  oleo_motor?: PreventiveMaintenanceItem;
+  pastilhas_freio?: PreventiveMaintenanceItem;
+  pneus?: PreventiveMaintenanceItem;
+  correia_dentada?: PreventiveMaintenanceItem;
+  [key: string]: PreventiveMaintenanceItem | undefined;
+}
+
 export interface Vehicle {
   id: string;
   user_id: string;
@@ -47,6 +62,8 @@ export interface Vehicle {
   modelo: string;
   ano: number;
   km_atual: number;
+  km_inicial_cadastro?: number | null;
+  manutencao_preventiva?: PreventiveMaintenanceData | null;
   media_gasolina: number | null;
   media_etanol: number | null;
   media_gnv: number | null;
@@ -59,6 +76,8 @@ export interface VehicleUpsert {
   modelo: string;
   ano: number;
   km_atual: number;
+  km_inicial_cadastro?: number | null;
+  manutencao_preventiva?: PreventiveMaintenanceData | null;
   media_gasolina: number | null;
   media_etanol: number | null;
   media_gnv: number | null;

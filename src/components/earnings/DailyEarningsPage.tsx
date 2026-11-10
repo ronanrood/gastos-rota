@@ -32,6 +32,7 @@ import { PaymentCyclesHistory } from '../payment/PaymentCyclesHistory';
 import { EditEarningModal } from './EditEarningModal';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
 import { EarningsFilterSummary } from '../filters/EarningsFilterSummary';
+import { getMostUrgentMaintenanceAlert } from '../../utils/vehicleHealth';
 import {
   type HistoryFilterState,
   getDefaultFilterState,
@@ -368,6 +369,43 @@ export const DailyEarningsPage: React.FC = () => {
         } catch {
           // ignora se localStorage não disponível
         }
+
+        // Soma automaticamente o KM rodado ao odômetro atual do veículo
+        if (numKm > 0) {
+          try {
+            const currentVehKm = vehicle?.km_atual || 0;
+            const updatedKm = Number((currentVehKm + numKm).toFixed(1));
+
+            // Atualiza estado local imediatamente
+            setVehicle((prev) => (prev ? { ...prev, km_atual: updatedKm } : null));
+
+            // Salva no banco de dados
+            if (vehicle?.id) {
+              await supabase
+                .from('vehicles')
+                .update({ km_atual: updatedKm })
+                .eq('id', vehicle.id);
+            } else {
+              // Fallback se id não estava em memória
+              const { data: v } = await supabase
+                .from('vehicles')
+                .select('id, km_atual')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+              if (v) {
+                const newKm = Number(((v.km_atual || 0) + numKm).toFixed(1));
+                await supabase
+                  .from('vehicles')
+                  .update({ km_atual: newKm })
+                  .eq('id', v.id);
+                setVehicle((prev) => (prev ? { ...prev, km_atual: newKm } : (v as Vehicle)));
+              }
+            }
+          } catch (vehErr) {
+            console.warn('Erro ao atualizar odômetro do veículo:', vehErr);
+          }
+        }
       } else {
         await refreshEarnings();
         setIsHistoryCollapsed(false);
@@ -438,8 +476,49 @@ export const DailyEarningsPage: React.FC = () => {
     return earningsList.reduce((acc, curr) => acc + (curr.km_rodado || 0), 0);
   }, [earningsList]);
 
+  // Alerta mais urgente de manutenção preventiva do veículo
+  const healthAlert = useMemo(() => {
+    if (!vehicle) return null;
+    return getMostUrgentMaintenanceAlert(vehicle, vehicle.km_atual || 0);
+  }, [vehicle]);
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
+      {/* ALERTA DISCRETO DE MANUTENÇÃO PREVENTIVA */}
+      {healthAlert && (
+        <motion.a
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileTap={{ scale: 0.98 }}
+          href="#saude"
+          className={`p-3 sm:p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-xs transition cursor-pointer shadow-md ${
+            healthAlert.status === 'vencido'
+              ? 'bg-rose-950/80 border-rose-500/60 text-rose-200 hover:bg-rose-950 ring-1 ring-rose-500/40'
+              : 'bg-amber-950/70 border-amber-500/50 text-amber-200 hover:bg-amber-950/90 ring-1 ring-amber-500/30'
+          }`}
+          title="Toque para abrir a Saúde do Veículo em Tools"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-base shrink-0">
+              {healthAlert.status === 'vencido' ? '🚨' : '⚠️'}
+            </span>
+            <div className="min-w-0">
+              <p className="font-extrabold truncate text-xs sm:text-sm">
+                {healthAlert.status === 'vencido'
+                  ? `Alerta de Manutenção: Troca de ${healthAlert.nome} está vencida!`
+                  : `Atenção ao veículo: Faltam apenas ${healthAlert.kmRestante.toLocaleString('pt-BR')} km para a troca de ${healthAlert.nome}.`}
+              </p>
+              <p className="text-[11px] opacity-80 truncate">
+                Toque para ver a Saúde do Veículo em Tools & Calculadoras →
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-xl bg-black/40 border border-white/10 hover:bg-black/60 transition whitespace-nowrap">
+            Ver em Tools
+          </span>
+        </motion.a>
+      )}
+
       {/* Cards de Resumo Rápido */}
       {earningsList.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">

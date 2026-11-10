@@ -17,6 +17,7 @@ import {
   Info,
   ArrowRight,
   X,
+  HeartPulse,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -25,13 +26,38 @@ import { formatCurrency } from '../../utils/exportUtils';
 import { QuickFuelModal } from './QuickFuelModal';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { triggerGoalCelebration } from '../../lib/celebrate';
+import { VehicleHealthPanel } from './VehicleHealthPanel';
 
 export const ToolsPage: React.FC = () => {
   const { user } = useAuth();
 
-  // Aba ativa: 'combustivel' | 'viabilidade' | 'metas' | 'custo_km'
-  const [activeTab, setActiveTab] = useState<'combustivel' | 'viabilidade' | 'metas' | 'custo_km'>('combustivel');
+  // Aba ativa: 'combustivel' | 'viabilidade' | 'metas' | 'custo_km' | 'saude'
+  const [activeTab, setActiveTab] = useState<
+    'combustivel' | 'viabilidade' | 'metas' | 'custo_km' | 'saude'
+  >(() => {
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.hash === '#saude' || window.location.hash === '#tools-saude')
+    ) {
+      return 'saude';
+    }
+    return 'combustivel';
+  });
   const [loading, setLoading] = useState(true);
+
+  // Sincroniza aba se hash mudar externamente (ex: clique no banner da tela inicial)
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (
+        window.location.hash === '#saude' ||
+        window.location.hash === '#tools-saude'
+      ) {
+        setActiveTab('saude');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Dados carregados do banco de dados
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -631,8 +657,8 @@ export const ToolsPage: React.FC = () => {
         </div>
       )}
 
-      {/* SELETOR DE ABAS DAS 4 FERRAMENTAS */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 bg-slate-950/80 border border-slate-800 rounded-2xl">
+      {/* SELETOR DE ABAS DAS 5 FERRAMENTAS */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-1.5 bg-slate-950/80 border border-slate-800 rounded-2xl">
         <motion.button
           whileTap={{ scale: 0.96 }}
           type="button"
@@ -722,6 +748,29 @@ export const ToolsPage: React.FC = () => {
           <span className="relative z-10 flex items-center justify-center gap-2 truncate">
             <Gauge className="w-4 h-4 shrink-0" />
             <span className="truncate">4. Custo / KM</span>
+          </span>
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          type="button"
+          onClick={() => setActiveTab('saude')}
+          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer col-span-2 sm:col-span-1 lg:col-span-1 ${
+            activeTab === 'saude'
+              ? 'text-white shadow-lg'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+          }`}
+        >
+          {activeTab === 'saude' && (
+            <motion.div
+              layoutId="toolsActiveTabIndicator"
+              className="absolute inset-0 bg-rose-600 rounded-xl shadow-lg shadow-rose-600/30"
+              transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center gap-2 truncate">
+            <HeartPulse className="w-4 h-4 shrink-0 text-rose-300" />
+            <span className="truncate">5. Saúde Carro</span>
           </span>
         </motion.button>
       </div>
@@ -1782,6 +1831,17 @@ export const ToolsPage: React.FC = () => {
             </div>
           </div>
         </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* FERRAMENTA 5: SAÚDE DO VEÍCULO E MANUTENÇÃO PREVENTIVA   */}
+      {/* ======================================================== */}
+      {activeTab === 'saude' && (
+        <VehicleHealthPanel
+          vehicle={vehicle}
+          userId={user?.id || ''}
+          onVehicleUpdated={(updated) => setVehicle(updated)}
+        />
       )}
 
       {/* MODAL DE ABASTECIMENTO RÁPIDO */}
