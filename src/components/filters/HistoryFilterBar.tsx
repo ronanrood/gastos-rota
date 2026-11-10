@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import {
   ChevronLeft,
   ChevronRight,
@@ -87,15 +88,16 @@ export const HistoryFilterBar: React.FC<HistoryFilterBarProps> = ({
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-lg backdrop-blur-sm space-y-3.5">
       {/* 1. SELETOR HORIZONTAL DE MÊS/ANO COM SETAS (Estilo Banco / Fintech) */}
       <div className="flex items-center justify-between gap-2 bg-slate-950/80 border border-slate-800/90 rounded-2xl p-1.5 sm:p-2">
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.92 }}
           onClick={handlePrevMonth}
-          className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer border border-slate-800/80 active:scale-95"
+          className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer border border-slate-800/80"
           title="Mês anterior"
           aria-label="Mês anterior"
         >
           <ChevronLeft className="w-5 h-5" />
-        </button>
+        </motion.button>
 
         <div className="flex-1 flex flex-col items-center justify-center text-center px-1">
           <div className="flex items-center gap-1.5">
@@ -117,99 +119,69 @@ export const HistoryFilterBar: React.FC<HistoryFilterBarProps> = ({
           )}
         </div>
 
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.92 }}
           onClick={handleNextMonth}
-          className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer border border-slate-800/80 active:scale-95"
+          className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer border border-slate-800/80"
           title="Próximo mês"
           aria-label="Próximo mês"
         >
           <ChevronRight className="w-5 h-5" />
-        </button>
+        </motion.button>
       </div>
 
       {/* 2. CHIPS INTELIGENTES DE PERÍODO (Botões Pílula Deslizantes no Mobile) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs select-none">
-        {/* Mês Inteiro */}
-        <button
-          type="button"
-          onClick={() => handleChipClick('month')}
-          className={`px-3 py-2 min-h-[40px] whitespace-nowrap rounded-xl font-bold transition cursor-pointer border active:scale-95 shrink-0 ${
-            filterState.periodChip === 'month'
-              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-950/70 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800/80'
-          }`}
-        >
-          Mês Inteiro
-        </button>
+        {[
+          { id: 'month' as PeriodChipType, label: 'Mês Inteiro' },
+          {
+            id: 'quinzena_1' as PeriodChipType,
+            label: `1ª Quinzena (Dias ${config.corte2Inicio} a ${config.corte2Fim} → Pagto Dia ${config.diaPagamento2})`,
+            title: `Dias ${config.corte2Inicio} a ${config.corte2Fim} • Pagamento Dia ${config.diaPagamento2}`,
+          },
+          {
+            id: 'quinzena_2' as PeriodChipType,
+            label: `2ª Quinzena (Dias ${config.corte1Inicio} a ${config.corte1Fim} → Pagto Dia ${config.diaPagamento1})`,
+            title: `Dias ${config.corte1Inicio} a ${config.corte1Fim} • Pagamento Dia ${config.diaPagamento1}`,
+          },
+          { id: 'today' as PeriodChipType, label: 'Hoje' },
+          { id: '7days' as PeriodChipType, label: 'Últimos 7 dias' },
+          {
+            id: 'custom' as PeriodChipType,
+            label: 'Período Personalizado',
+            icon: SlidersHorizontal,
+          },
+        ].map((chip) => {
+          const isSelected = filterState.periodChip === chip.id;
+          const IconComp = chip.icon;
 
-        {/* 1ª Quinzena */}
-        <button
-          type="button"
-          onClick={() => handleChipClick('quinzena_1')}
-          className={`px-3 py-2 min-h-[40px] whitespace-nowrap rounded-xl font-bold transition cursor-pointer border active:scale-95 shrink-0 ${
-            filterState.periodChip === 'quinzena_1'
-              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-950/70 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800/80'
-          }`}
-          title={`Dias ${config.corte2Inicio} a ${config.corte2Fim} • Pagamento Dia ${config.diaPagamento2}`}
-        >
-          1ª Quinzena (Dias {config.corte2Inicio} a {config.corte2Fim} → Pagto Dia {config.diaPagamento2})
-        </button>
-
-        {/* 2ª Quinzena */}
-        <button
-          type="button"
-          onClick={() => handleChipClick('quinzena_2')}
-          className={`px-3 py-2 min-h-[40px] whitespace-nowrap rounded-xl font-bold transition cursor-pointer border active:scale-95 shrink-0 ${
-            filterState.periodChip === 'quinzena_2'
-              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-950/70 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800/80'
-          }`}
-          title={`Dias ${config.corte1Inicio} a ${config.corte1Fim} • Pagamento Dia ${config.diaPagamento1}`}
-        >
-          2ª Quinzena (Dias {config.corte1Inicio} a {config.corte1Fim} → Pagto Dia {config.diaPagamento1})
-        </button>
-
-        {/* Hoje */}
-        <button
-          type="button"
-          onClick={() => handleChipClick('today')}
-          className={`px-3 py-2 min-h-[40px] whitespace-nowrap rounded-xl font-bold transition cursor-pointer border active:scale-95 shrink-0 ${
-            filterState.periodChip === 'today'
-              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-950/70 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800/80'
-          }`}
-        >
-          Hoje
-        </button>
-
-        {/* Últimos 7 dias */}
-        <button
-          type="button"
-          onClick={() => handleChipClick('7days')}
-          className={`px-3 py-2 min-h-[40px] whitespace-nowrap rounded-xl font-bold transition cursor-pointer border active:scale-95 shrink-0 ${
-            filterState.periodChip === '7days'
-              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-950/70 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800/80'
-          }`}
-        >
-          Últimos 7 dias
-        </button>
-
-        {/* Período Personalizado */}
-        <button
-          type="button"
-          onClick={() => handleChipClick('custom')}
-          className={`px-3 py-2 min-h-[40px] whitespace-nowrap rounded-xl font-bold transition cursor-pointer border active:scale-95 shrink-0 flex items-center gap-1.5 ${
-            filterState.periodChip === 'custom'
-              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20'
-              : 'bg-slate-950/70 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800/80'
-          }`}
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          <span>Período Personalizado</span>
-        </button>
+          return (
+            <motion.button
+              key={chip.id}
+              type="button"
+              whileTap={{ scale: 0.94 }}
+              whileHover={{ scale: 1.02 }}
+              onClick={() => handleChipClick(chip.id)}
+              title={chip.title}
+              className={`relative px-3.5 py-2 min-h-[40px] whitespace-nowrap rounded-xl font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 select-none ${
+                isSelected
+                  ? 'text-slate-950 font-black'
+                  : 'text-slate-300 hover:text-white bg-slate-950/70 border border-slate-800 hover:bg-slate-800/80'
+              }`}
+            >
+              {isSelected && (
+                <motion.div
+                  layoutId="activePeriodChipIndicator"
+                  className="absolute inset-0 bg-emerald-500 rounded-xl -z-10 shadow-md shadow-emerald-500/25 border border-emerald-400"
+                  transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                />
+              )}
+              {IconComp && <IconComp className="w-3.5 h-3.5" />}
+              <span>{chip.label}</span>
+            </motion.button>
+          );
+        })}
       </div>
 
       {/* 3. CAMPOS DE DATA PERSONALIZADA (Quando chip 'custom' está ativo) */}

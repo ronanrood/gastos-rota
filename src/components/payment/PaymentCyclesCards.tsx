@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { DailyEarning, PaymentCycleRecord } from '../../types/database';
 import { computePaymentCycles, type PaymentCycleInfo } from '../../utils/paymentCycles';
 import { PaymentConfigModal } from './PaymentConfigModal';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
+import { AnimatedCounter } from '../common/AnimatedCounter';
 import {
   CalendarDays,
   Calendar,
@@ -268,7 +270,7 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
                       Faturamento Calculado no Período
                     </span>
                     <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-0.5 tracking-tight font-mono">
-                      {formatCurrency(cycle.totalFaturamento)}
+                      <AnimatedCounter value={cycle.totalFaturamento} formatAsCurrency />
                     </div>
                   </div>
 
@@ -318,31 +320,33 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
                   </div>
 
                   {isPaid ? (
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setCycleToConfirm(cycle);
                       }}
-                      className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/80 text-xs font-bold transition active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                      className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/80 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
                       title="Editar dados do recebimento"
                     >
                       <Pencil className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Editar Recebimento</span>
-                    </button>
+                    </motion.button>
                   ) : (
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setCycleToConfirm(cycle);
                       }}
-                      className="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
+                      className="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
                       title="Confirmar que o pagamento caiu na conta"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
                       <span>Marcar como Recebido</span>
-                    </button>
+                    </motion.button>
                   )}
                 </div>
               </div>

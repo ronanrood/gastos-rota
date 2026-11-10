@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Printer,
   X,
@@ -22,6 +23,7 @@ import {
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { DailyEarning, FuelLog, MaintenanceLog, Profile, Vehicle } from '../../types/database';
+import { modalBackdropVariants, modalContentVariants } from '../common/MotionVariants';
 import {
   formatCurrency,
   formatDateBR,
@@ -183,8 +185,6 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
     endDate,
   ]);
 
-  if (!isOpen) return null;
-
   // Itens consolidados
   const effectiveEarnings = earningsItems.length > 0 ? earningsItems : extraEarnings;
   const effectiveFuel = fuelItems.length > 0 ? fuelItems : extraFuel;
@@ -322,72 +322,96 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:inset-auto">
-      {/* Estilos específicos de impressão para forçar documento A4 limpo */}
-      <style>{`
-        @media print {
-          body {
-            background-color: white !important;
-            color: #0f172a !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          nav, header, aside, .bottom-nav, .print-hide {
-            display: none !important;
-          }
-          #report-print-container {
-            display: block !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 12mm !important;
-            background: white !important;
-            color: #0f172a !important;
-            box-shadow: none !important;
-            border: none !important;
-            border-radius: 0 !important;
-          }
-          .page-break-inside-avoid {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-          }
-        }
-      `}</style>
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:inset-auto">
+          {/* Estilos específicos de impressão para forçar documento A4 limpo */}
+          <style>{`
+            @media print {
+              * {
+                transform: none !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              body {
+                background-color: white !important;
+                color: #0f172a !important;
+              }
+              nav, header, aside, .bottom-nav, .print-hide {
+                display: none !important;
+              }
+              #report-print-container {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 12mm !important;
+                background: white !important;
+                color: #0f172a !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+              }
+              .page-break-inside-avoid {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+              }
+            }
+          `}</style>
 
-      {/* Modal Wrapper */}
-      <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] print:max-h-none print:border-none print:shadow-none print:rounded-none print:bg-white">
-        {/* TOPO DO MODAL: TÍTULO, SUBTÍTULO E FECHAR (Oculto na impressão) */}
-        <div className="p-4 sm:p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-3 print:hidden shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-bold shadow-md shadow-emerald-500/20 shrink-0">
-              <SlidersHorizontal className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
-                  Personalizar Relatório
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  WhatsApp & PDF
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Escolha o modelo pronto ou selecione o que deseja exibir para a transportadora
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
+          {/* Backdrop */}
+          <motion.div
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             onClick={onClose}
-            className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
-            title="Fechar personalizador"
+            className="fixed inset-0 bg-slate-950/85 backdrop-blur-md cursor-pointer print:hidden"
+          />
+
+          {/* Modal Wrapper */}
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            variants={modalContentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] relative z-10 print:max-h-none print:border-none print:shadow-none print:rounded-none print:bg-white"
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            {/* TOPO DO MODAL: TÍTULO, SUBTÍTULO E FECHAR (Oculto na impressão) */}
+            <div className="p-4 sm:p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-3 print:hidden shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-bold shadow-md shadow-emerald-500/20 shrink-0">
+                  <SlidersHorizontal className="w-5 h-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                      Personalizar Relatório
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      WhatsApp & PDF
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Escolha o modelo pronto ou selecione o que deseja exibir para a transportadora
+                  </p>
+                </div>
+              </div>
+
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                type="button"
+                onClick={onClose}
+                className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+                title="Fechar personalizador"
+              >
+                <X className="w-5 h-5" />
+              </motion.button>
+            </div>
 
         {/* CORPO DO MODAL (Scrollável) */}
         <div className="overflow-y-auto p-4 sm:p-6 space-y-6 print:p-0 print:overflow-visible">
@@ -415,10 +439,11 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
               {/* Preset 1: Cobrança Transportadora */}
-              <button
+              <motion.button
+                whileTap={{ scale: 0.96 }}
                 type="button"
                 onClick={() => handleSelectPreset('cobranca_transportadora')}
-                className={`p-3 rounded-2xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between min-h-[78px] ${
+                className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between min-h-[78px] ${
                   activePreset === 'cobranca_transportadora'
                     ? 'bg-emerald-950/60 border-emerald-500 shadow-md shadow-emerald-500/20 ring-1 ring-emerald-500/40'
                     : 'bg-slate-950/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
@@ -438,13 +463,14 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                     Só Ganhos Brutos + PIX
                   </div>
                 </div>
-              </button>
+              </motion.button>
 
               {/* Preset 2: Apenas Resumo Líquido */}
-              <button
+              <motion.button
+                whileTap={{ scale: 0.96 }}
                 type="button"
                 onClick={() => handleSelectPreset('apenas_resumo_liquido')}
-                className={`p-3 rounded-2xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between min-h-[78px] ${
+                className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between min-h-[78px] ${
                   activePreset === 'apenas_resumo_liquido'
                     ? 'bg-blue-950/60 border-blue-500 shadow-md shadow-blue-500/20 ring-1 ring-blue-500/40'
                     : 'bg-slate-950/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
@@ -464,13 +490,14 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                     Bruto vs Gastos (sem lista)
                   </div>
                 </div>
-              </button>
+              </motion.button>
 
               {/* Preset 3: Apenas Despesas */}
-              <button
+              <motion.button
+                whileTap={{ scale: 0.96 }}
                 type="button"
                 onClick={() => handleSelectPreset('apenas_despesas')}
-                className={`p-3 rounded-2xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between min-h-[78px] ${
+                className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between min-h-[78px] ${
                   activePreset === 'apenas_despesas'
                     ? 'bg-amber-950/60 border-amber-500 shadow-md shadow-amber-500/20 ring-1 ring-amber-500/40'
                     : 'bg-slate-950/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
@@ -490,13 +517,14 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                     Combustível + Oficina
                   </div>
                 </div>
-              </button>
+              </motion.button>
 
               {/* Preset 4: Relatório Completo */}
-              <button
+              <motion.button
+                whileTap={{ scale: 0.96 }}
                 type="button"
                 onClick={() => handleSelectPreset('completo')}
-                className={`p-3 rounded-2xl border text-left transition-all active:scale-[0.98] cursor-pointer flex flex-col justify-between min-h-[78px] ${
+                className={`p-3 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between min-h-[78px] ${
                   activePreset === 'completo'
                     ? 'bg-teal-950/60 border-teal-500 shadow-md shadow-teal-500/20 ring-1 ring-teal-500/40'
                     : 'bg-slate-950/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
@@ -516,7 +544,7 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                     Todos os blocos inclusos
                   </div>
                 </div>
-              </button>
+              </motion.button>
             </div>
           </section>
 
@@ -1344,10 +1372,11 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
             {/* Botão Copiar Texto */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={handleCopy}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 min-h-[44px] rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-bold transition active:scale-[0.97] cursor-pointer border border-slate-700 shadow-sm"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 min-h-[44px] rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-bold transition cursor-pointer border border-slate-700 shadow-sm"
               title="Copiar texto formatado para o WhatsApp"
             >
               {copied ? (
@@ -1361,32 +1390,36 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                   <span>Copiar Texto</span>
                 </>
               )}
-            </button>
+            </motion.button>
 
             {/* Botão Enviar no WhatsApp */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={handleWhatsApp}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs sm:text-sm font-bold transition active:scale-[0.97] cursor-pointer shadow-lg shadow-emerald-600/25 border border-emerald-500/40"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold transition cursor-pointer shadow-lg shadow-emerald-600/25 border border-emerald-500/40"
               title="Abrir WhatsApp com o relatório pré-formatado"
             >
               <Share2 className="w-4 h-4" />
               <span>Enviar no WhatsApp</span>
-            </button>
+            </motion.button>
 
             {/* Botão Baixar / Imprimir PDF */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={handlePrint}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs sm:text-sm font-bold transition active:scale-[0.97] cursor-pointer shadow-lg shadow-blue-600/25 border border-blue-500/40"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold transition cursor-pointer shadow-lg shadow-blue-600/25 border border-blue-500/40"
               title="Baixar ou Imprimir Extrato em PDF"
             >
               <Printer className="w-4 h-4" />
               <span>Baixar / Imprimir PDF</span>
-            </button>
+            </motion.button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
+  )}
+</AnimatePresence>
   );
 };

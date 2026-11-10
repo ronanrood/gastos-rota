@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { DailyEarning, Vehicle, PaymentCycleRecord } from '../../types/database';
+import { AnimatedCounter } from '../common/AnimatedCounter';
+import { staggerContainerVariants, staggerItemVariants } from '../common/MotionVariants';
 import {
   Calendar,
   Package,
@@ -545,7 +548,7 @@ export const DailyEarningsPage: React.FC = () => {
                 Total Bruto Estimado
               </div>
               <div className="text-3xl sm:text-4xl font-black text-white mt-1 tracking-tight">
-                {formatCurrency(totalBrutoEstimado)}
+                <AnimatedCounter value={totalBrutoEstimado} formatAsCurrency />
               </div>
             </div>
 
@@ -702,10 +705,12 @@ export const DailyEarningsPage: React.FC = () => {
 
           {/* Botão de Envio */}
           <div className="pt-2">
-            <button
+            <motion.button
               type="submit"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.96 }}
               disabled={submitting}
-              className="w-full h-12 min-h-[48px] px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full h-12 min-h-[48px] px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -718,7 +723,7 @@ export const DailyEarningsPage: React.FC = () => {
                   Salvar Lançamento do Dia
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
         </form>
       </section>
@@ -883,24 +888,33 @@ export const DailyEarningsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Lista de Registros */}
-            <div className="space-y-3">
-              {filteredEarningsList.map((item) => {
-                const faturamento =
-                  typeof item.faturamento_bruto === 'number'
-                    ? item.faturamento_bruto
-                    : item.qtd_pecas * item.valor_unitario_peca + item.valor_extra_bonus;
+            {/* Lista de Registros com Stagger e Animação de Layout */}
+            <motion.div
+              key={`${filterState.monthYear}-${filterState.periodChip}`}
+              variants={staggerContainerVariants}
+              initial="hidden"
+              animate="visible"
+              className="space-y-3"
+            >
+              <AnimatePresence>
+                {filteredEarningsList.map((item) => {
+                  const faturamento =
+                    typeof item.faturamento_bruto === 'number'
+                      ? item.faturamento_bruto
+                      : item.qtd_pecas * item.valor_unitario_peca + item.valor_extra_bonus;
 
-                const rendimentoKm = item.km_rodado > 0 ? faturamento / item.km_rodado : 0;
-                const isConfirming = confirmDeleteId === item.id;
-                const isDeleting = deletingId === item.id;
-                const { fullBadge } = formatCardDateBadge(item.data, profile);
+                  const rendimentoKm = item.km_rodado > 0 ? faturamento / item.km_rodado : 0;
+                  const isConfirming = confirmDeleteId === item.id;
+                  const isDeleting = deletingId === item.id;
+                  const { fullBadge } = formatCardDateBadge(item.data, profile);
 
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition shadow-sm"
-                  >
+                  return (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      variants={staggerItemVariants}
+                      className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition-colors shadow-sm"
+                    >
                     <div className="flex items-start justify-between gap-3">
                       {/* Informações da Data e Faturamento */}
                       <div>
@@ -994,10 +1008,11 @@ export const DailyEarningsPage: React.FC = () => {
                         &quot;{item.observacoes}&quot;
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 );
               })}
-            </div>
+            </AnimatePresence>
+          </motion.div>
           </>
         )}
       </section>

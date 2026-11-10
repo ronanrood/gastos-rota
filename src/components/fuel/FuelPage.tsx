@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { FuelLog, FuelLogInsert, FuelType, Vehicle } from '../../types/database';
+import { staggerContainerVariants, staggerItemVariants } from '../common/MotionVariants';
 import {
   Fuel,
   Calendar,
@@ -631,10 +633,12 @@ export const FuelPage: React.FC = () => {
 
           {/* Botão de Salvar */}
           <div className="pt-2">
-            <button
+            <motion.button
               type="submit"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.96 }}
               disabled={submitting}
-              className="w-full h-12 min-h-[48px] px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-amber-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full h-12 min-h-[48px] px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-amber-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -647,7 +651,7 @@ export const FuelPage: React.FC = () => {
                   Salvar Abastecimento
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
         </form>
       </section>
@@ -740,113 +744,123 @@ export const FuelPage: React.FC = () => {
           </div>
         )}
 
-        {/* Lista de Abastecimentos */}
-        <div className="space-y-3">
-          {filteredLogs.map((item) => {
-            const litros =
-              typeof item.litros_calculados === 'number'
-                ? item.litros_calculados
-                : item.valor_total_abastecido / (item.preco_por_litro_ou_m3 || 1);
+        {/* Lista de Abastecimentos com Stagger e Animação de Layout */}
+        <motion.div
+          key={`${filterState.monthYear}-${filterState.periodChip}`}
+          variants={staggerContainerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-3"
+        >
+          <AnimatePresence>
+            {filteredLogs.map((item) => {
+              const litros =
+                typeof item.litros_calculados === 'number'
+                  ? item.litros_calculados
+                  : item.valor_total_abastecido / (item.preco_por_litro_ou_m3 || 1);
 
-            const isConfirming = confirmDeleteId === item.id;
-            const isDeleting = deletingId === item.id;
-            const { fullBadge } = formatCardDateBadge(item.data, profile);
+              const isConfirming = confirmDeleteId === item.id;
+              const isDeleting = deletingId === item.id;
+              const { fullBadge } = formatCardDateBadge(item.data, profile);
 
-            return (
-              <div
-                key={item.id}
-                className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
-                        {fullBadge}
-                      </span>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                          item.tipo_combustivel === 'gasolina'
-                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                            : item.tipo_combustivel === 'etanol'
-                            ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
-                            : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-                        }`}
-                      >
-                        {item.tipo_combustivel}
-                      </span>
-                    </div>
-
-                    <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1.5 font-mono">
-                      {formatCurrency(item.valor_total_abastecido)}
-                    </div>
-                  </div>
-
-                  {/* Ações: Editar e Excluir */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {!isConfirming && (
-                      <button
-                        type="button"
-                        onClick={() => setEditingFuelLog(item)}
-                        aria-label="Editar abastecimento"
-                        title="Editar este abastecimento"
-                        className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 active:bg-amber-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
-                      >
-                        <Pencil className="w-4 h-4" />
-                        <span className="hidden sm:inline">Editar</span>
-                      </button>
-                    )}
-
-                    {isConfirming ? (
-                      <div className="flex items-center gap-1.5 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
-                        <span className="text-[11px] font-semibold text-rose-300 px-1">
-                          Excluir?
+              return (
+                <motion.div
+                  key={item.id}
+                  layout
+                  variants={staggerItemVariants}
+                  className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition-colors shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
+                          {fullBadge}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={isDeleting}
-                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                        <span
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                            item.tipo_combustivel === 'gasolina'
+                              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                              : item.tipo_combustivel === 'etanol'
+                              ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
+                              : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                          }`}
                         >
-                          {isDeleting ? '...' : 'Sim'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
-                        >
-                          Não
-                        </button>
+                          {item.tipo_combustivel}
+                        </span>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(item.id)}
-                        aria-label="Excluir abastecimento"
-                        title="Excluir este abastecimento"
-                        className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
 
-                {/* Detalhes operacionais em Badges */}
-                <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                  <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                    <strong className="text-white">{litros.toFixed(2)}</strong> {getUnidade(item.tipo_combustivel)}
-                  </span>
-                  <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                    {formatCurrency(item.preco_por_litro_ou_m3)} / {getUnidade(item.tipo_combustivel)}
-                  </span>
-                  <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                    Odômetro: <strong className="text-white">{item.km_odometro.toLocaleString('pt-BR')}</strong> km
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                      <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1.5 font-mono">
+                        {formatCurrency(item.valor_total_abastecido)}
+                      </div>
+                    </div>
+
+                    {/* Ações: Editar e Excluir */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {!isConfirming && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingFuelLog(item)}
+                          aria-label="Editar abastecimento"
+                          title="Editar este abastecimento"
+                          className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 active:bg-amber-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
+                        >
+                          <Pencil className="w-4 h-4" />
+                          <span className="hidden sm:inline">Editar</span>
+                        </button>
+                      )}
+
+                      {isConfirming ? (
+                        <div className="flex items-center gap-1.5 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
+                          <span className="text-[11px] font-semibold text-rose-300 px-1">
+                            Excluir?
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={isDeleting}
+                            className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                          >
+                            {isDeleting ? '...' : 'Sim'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
+                          >
+                            Não
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(item.id)}
+                          aria-label="Excluir abastecimento"
+                          title="Excluir este abastecimento"
+                          className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Detalhes operacionais em Badges */}
+                  <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                    <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+                      <strong className="text-white">{litros.toFixed(2)}</strong> {getUnidade(item.tipo_combustivel)}
+                    </span>
+                    <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+                      {formatCurrency(item.preco_por_litro_ou_m3)} / {getUnidade(item.tipo_combustivel)}
+                    </span>
+                    <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+                      Odômetro: <strong className="text-white">{item.km_odometro.toLocaleString('pt-BR')}</strong> km
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
       </section>
 
       {/* Modal Responsivo de Edição de Abastecimento */}

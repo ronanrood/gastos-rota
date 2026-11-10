@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { DailyEarning, FuelLog, MaintenanceLog, Vehicle, PaymentCycleRecord } from '../../types/database';
+import { AnimatedCounter } from '../common/AnimatedCounter';
+import { staggerContainerVariants, staggerItemVariants } from '../common/MotionVariants';
 import {
   ResponsiveContainer,
   BarChart,
@@ -462,10 +465,20 @@ export const DashboardPage: React.FC = () => {
         />
       </div>
 
-      {/* 4 CARDS PRINCIPAIS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+      {/* 4 CARDS PRINCIPAIS COM ENTRADA EM CASCATA */}
+      <motion.div
+        key={`${filterState.monthYear}-${filterState.periodChip}`}
+        variants={staggerContainerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4"
+      >
         {/* Card A: Faturamento Bruto */}
-        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md">
+        <motion.div
+          variants={staggerItemVariants}
+          whileHover={{ y: -2 }}
+          className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Faturamento Bruto
@@ -474,16 +487,20 @@ export const DashboardPage: React.FC = () => {
               <TrendingUp className="w-4 h-4 stroke-[2.2]" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">
-            {formatCurrency(faturamentoBruto)}
+          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight font-mono">
+            <AnimatedCounter value={faturamentoBruto} formatAsCurrency />
           </div>
           <div className="mt-2 text-xs text-slate-400 flex items-center gap-1">
             <span className="text-emerald-400 font-semibold">{earnings.length}</span> dias de produção
           </div>
-        </div>
+        </motion.div>
 
         {/* Card B: Despesas Totais */}
-        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md">
+        <motion.div
+          variants={staggerItemVariants}
+          whileHover={{ y: -2 }}
+          className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Despesas Totais
@@ -492,8 +509,8 @@ export const DashboardPage: React.FC = () => {
               <TrendingDown className="w-4 h-4 stroke-[2.2]" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">
-            {formatCurrency(despesasTotais)}
+          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight font-mono">
+            <AnimatedCounter value={despesasTotais} formatAsCurrency />
           </div>
           <div className="mt-2 text-[11px] text-slate-400 flex flex-wrap items-center gap-x-2">
             <span className="text-amber-400 font-medium">⛽ {formatCurrency(despesasCombustivel)}</span>
@@ -518,10 +535,12 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Card C: Lucro Líquido Real (Destaque Verde se >= 0, Vermelho se < 0) */}
-        <div
+        <motion.div
+          variants={staggerItemVariants}
+          whileHover={{ y: -2 }}
           className={`border rounded-3xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md ${
             lucroLiquidoReal >= 0
               ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/40 ring-1 ring-emerald-500/20'
@@ -543,11 +562,11 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <div
-            className={`text-2xl sm:text-3xl font-black mt-3 tracking-tight ${
+            className={`text-2xl sm:text-3xl font-black mt-3 tracking-tight font-mono ${
               lucroLiquidoReal >= 0 ? 'text-emerald-400' : 'text-rose-400'
             }`}
           >
-            {formatCurrency(lucroLiquidoReal)}
+            <AnimatedCounter value={lucroLiquidoReal} formatAsCurrency />
           </div>
           <div className="mt-2 text-xs flex items-center gap-1.5">
             <span
@@ -557,16 +576,20 @@ export const DashboardPage: React.FC = () => {
                   : 'bg-rose-500/20 text-rose-300'
               }`}
             >
-              Margem: {margemLucro.toFixed(1)}%
+              Margem: <AnimatedCounter value={margemLucro} decimals={1} suffix="%" />
             </span>
             <span className="text-[11px] text-slate-400">
               {lucroLiquidoReal >= 0 ? 'Lucro positivo' : 'Déficit no período'}
             </span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Card D: Indicadores por KM */}
-        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md">
+        <motion.div
+          variants={staggerItemVariants}
+          whileHover={{ y: -2 }}
+          className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Indicadores por KM
@@ -576,19 +599,19 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight font-mono">
-            {totalKmRodados.toLocaleString('pt-BR')} <span className="text-sm font-normal text-slate-400">km</span>
+            <AnimatedCounter value={totalKmRodados} decimals={0} /> <span className="text-sm font-normal text-slate-400">km</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-300 flex flex-wrap gap-x-2">
             <span>
-              Bruto: <strong className="text-emerald-400 font-mono">{formatCurrency(ganhoBrutoPorKm)}/km</strong>
+              Bruto: <strong className="text-emerald-400 font-mono"><AnimatedCounter value={ganhoBrutoPorKm} formatAsCurrency />/km</strong>
             </span>
             <span className="text-slate-600">•</span>
             <span>
-              Líquido: <strong className={`${lucroLiquidoPorKm >= 0 ? 'text-teal-400' : 'text-rose-400'} font-mono`}>{formatCurrency(lucroLiquidoPorKm)}/km</strong>
+              Líquido: <strong className={`${lucroLiquidoPorKm >= 0 ? 'text-teal-400' : 'text-rose-400'} font-mono`}><AnimatedCounter value={lucroLiquidoPorKm} formatAsCurrency />/km</strong>
             </span>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* AVISO INFORMATIVO: ORÇAMENTOS PENDENTES (Não abatem do Lucro Líquido) */}
       {orcamentosPendentes.length > 0 && (

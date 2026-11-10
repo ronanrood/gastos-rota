@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import type { MaintenanceLog, MaintenanceLogUpdate, MaintenanceStatus, PaymentMethod } from '../../types/database';
+import { modalBackdropVariants, modalContentVariants } from '../common/MotionVariants';
 import {
   X,
   Pencil,
@@ -236,13 +238,28 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
   const isRealizado = status === 'realizado';
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-edit-maintenance-title"
-        className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-200"
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-4">
+          <motion.div
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={onClose}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+          />
+
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-edit-maintenance-title"
+            variants={modalContentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto z-10"
+          >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -696,7 +713,9 @@ export const EditMaintenanceModal: React.FC<EditMaintenanceModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
+  )}
+</AnimatePresence>
   );
 };

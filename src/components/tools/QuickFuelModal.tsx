@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Fuel,
@@ -12,6 +13,7 @@ import {
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { FuelLog, FuelLogInsert, FuelType, Vehicle } from '../../types/database';
+import { modalBackdropVariants, modalContentVariants } from '../common/MotionVariants';
 
 export interface QuickFuelModalProps {
   isOpen: boolean;
@@ -225,13 +227,28 @@ export const QuickFuelModal: React.FC<QuickFuelModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-quick-fuel-title"
-        className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto animate-in fade-in zoom-in-95 duration-200"
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-4">
+          <motion.div
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={onClose}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+          />
+
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-quick-fuel-title"
+            variants={modalContentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto z-10"
+          >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -309,41 +326,35 @@ export const QuickFuelModal: React.FC<QuickFuelModalProps> = ({
               Tipo de Combustível
             </label>
             <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleSelectTipo('etanol')}
-                className={`min-h-[44px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                  tipoCombustivel === 'etanol'
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>🌿 Etanol</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectTipo('gasolina')}
-                className={`min-h-[44px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                  tipoCombustivel === 'gasolina'
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>⛽ Gasolina</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectTipo('gnv')}
-                className={`min-h-[44px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                  tipoCombustivel === 'gnv'
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>⚡ GNV</span>
-              </button>
+              {[
+                { id: 'etanol' as FuelType, label: '🌿 Etanol' },
+                { id: 'gasolina' as FuelType, label: '⛽ Gasolina' },
+                { id: 'gnv' as FuelType, label: '⚡ GNV' },
+              ].map((btn) => {
+                const isSelected = tipoCombustivel === btn.id;
+                return (
+                  <motion.button
+                    key={btn.id}
+                    type="button"
+                    whileTap={{ scale: 0.94 }}
+                    onClick={() => handleSelectTipo(btn.id)}
+                    className={`relative min-h-[44px] py-2 px-3 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                      isSelected
+                        ? 'text-slate-950 font-black'
+                        : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {isSelected && (
+                      <motion.div
+                        layoutId="quickFuelTypeIndicator"
+                        className="absolute inset-0 bg-emerald-500 rounded-xl -z-10 shadow-md shadow-emerald-500/25"
+                        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                      />
+                    )}
+                    <span>{btn.label}</span>
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
 
@@ -457,10 +468,12 @@ export const QuickFuelModal: React.FC<QuickFuelModalProps> = ({
               Cancelar
             </button>
 
-            <button
+            <motion.button
               type="submit"
+              whileTap={{ scale: 0.96 }}
+              whileHover={{ scale: 1.01 }}
               disabled={submitting || numValorTotal <= 0 || numPrecoLitro <= 0}
-              className="flex-[2] min-h-[48px] py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs sm:text-sm font-black transition shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-[2] min-h-[48px] py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs sm:text-sm font-black transition shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
@@ -473,10 +486,12 @@ export const QuickFuelModal: React.FC<QuickFuelModalProps> = ({
                   <span>Confirmar e Salvar Abastecimento</span>
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
+  )}
+</AnimatePresence>
   );
 };

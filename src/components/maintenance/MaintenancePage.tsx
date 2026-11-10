@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { MaintenanceLog, MaintenanceLogInsert, MaintenanceStatus, PaymentMethod, Vehicle } from '../../types/database';
+import { staggerContainerVariants, staggerItemVariants } from '../common/MotionVariants';
 import {
   Wrench,
   Calendar,
@@ -644,31 +646,47 @@ export const MaintenancePage: React.FC = () => {
             Tipo de Lançamento
           </label>
           <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-950/80 rounded-2xl border border-slate-800">
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.97 }}
               onClick={() => setStatus('realizado')}
-              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] ${
+              className={`relative flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer select-none ${
                 status === 'realizado'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'text-white'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
+              {status === 'realizado' && (
+                <motion.div
+                  layoutId="maintenanceFormStatusIndicator"
+                  className="absolute inset-0 bg-blue-600 rounded-xl -z-10 shadow-lg shadow-blue-600/30"
+                  transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                />
+              )}
               <Wrench className="w-4 h-4 stroke-[2.2]" />
               <span>🛠️ Serviço Realizado</span>
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.97 }}
               onClick={() => setStatus('orcamento')}
-              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] ${
+              className={`relative flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer select-none ${
                 status === 'orcamento'
-                  ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30 font-black'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'text-slate-950 font-black'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
+              {status === 'orcamento' && (
+                <motion.div
+                  layoutId="maintenanceFormStatusIndicator"
+                  className="absolute inset-0 bg-amber-500 rounded-xl -z-10 shadow-lg shadow-amber-500/30"
+                  transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                />
+              )}
               <ClipboardList className="w-4 h-4 stroke-[2.2]" />
               <span>📋 Orçamento Pendente</span>
-            </button>
+            </motion.button>
           </div>
         </div>
 
@@ -816,34 +834,50 @@ export const MaintenancePage: React.FC = () => {
                   <CreditCard className="w-4 h-4 text-blue-400" />
                   Forma de Pagamento
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800">
+                  <motion.button
                     type="button"
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => setFormaPagamento('avista')}
-                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] ${
+                    className={`relative flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer select-none ${
                       formaPagamento === 'avista'
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                        : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                        ? 'text-white'
+                        : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <span>💵 À Vista (PIX / Débito / Dinheiro)</span>
-                  </button>
+                    {formaPagamento === 'avista' && (
+                      <motion.div
+                        layoutId="paymentMethodIndicator"
+                        className="absolute inset-0 bg-emerald-600 rounded-xl -z-10 shadow-md shadow-emerald-600/30"
+                        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                      />
+                    )}
+                    <span>💵 À Vista</span>
+                  </motion.button>
 
-                  <button
+                  <motion.button
                     type="button"
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       setFormaPagamento('parcelado');
                       const q = parseInt(qtdParcelas, 10) || 2;
                       setValorParcela((valorTotalEstimado / q).toFixed(2));
                     }}
-                    className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] ${
+                    className={`relative flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer select-none ${
                       formaPagamento === 'parcelado'
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                        : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                        ? 'text-white'
+                        : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <span>💳 Parcelado (Cartão / Boleto)</span>
-                  </button>
+                    {formaPagamento === 'parcelado' && (
+                      <motion.div
+                        layoutId="paymentMethodIndicator"
+                        className="absolute inset-0 bg-blue-600 rounded-xl -z-10 shadow-md shadow-blue-600/30"
+                        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                      />
+                    )}
+                    <span>💳 Parcelado</span>
+                  </motion.button>
                 </div>
               </div>
 
@@ -1003,10 +1037,12 @@ export const MaintenancePage: React.FC = () => {
 
           {/* Botão de Salvar */}
           <div className="pt-2">
-            <button
+            <motion.button
               type="submit"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.96 }}
               disabled={submitting}
-              className={`w-full h-12 min-h-[48px] px-4 font-bold text-sm sm:text-base rounded-2xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+              className={`w-full h-12 min-h-[48px] px-4 font-bold text-sm sm:text-base rounded-2xl shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                 status === 'realizado'
                   ? 'bg-blue-500 hover:bg-blue-400 active:bg-blue-600 text-slate-950 shadow-blue-500/25'
                   : 'bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 shadow-amber-500/25 font-black'
@@ -1028,7 +1064,7 @@ export const MaintenancePage: React.FC = () => {
                   Salvar Orçamento Pendente
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
         </form>
       </section>
@@ -1075,22 +1111,24 @@ export const MaintenancePage: React.FC = () => {
 
         {/* Filtros Rápidos: Todos vs Serviços Realizados vs Orçamentos Pendentes */}
         <div className="flex flex-wrap items-center gap-2 pt-1 px-1">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={() => setStatusFilter('all')}
-            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition cursor-pointer active:scale-[0.97] ${
+            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
               statusFilter === 'all'
                 ? 'bg-slate-100 text-slate-950 border-white font-bold shadow-sm'
                 : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
             }`}
           >
             Todos ({dateFilteredLogs.length})
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={() => setStatusFilter('realizado')}
-            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition cursor-pointer active:scale-[0.97] flex items-center gap-1.5 ${
+            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition-colors cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'realizado'
                 ? 'bg-blue-600 text-white border-blue-500 font-bold shadow-md shadow-blue-600/30'
                 : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
@@ -1098,12 +1136,13 @@ export const MaintenancePage: React.FC = () => {
           >
             <Wrench className="w-3.5 h-3.5" />
             <span>Serviços Realizados ({realizadosCount})</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={() => setStatusFilter('orcamento')}
-            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition cursor-pointer active:scale-[0.97] flex items-center gap-1.5 ${
+            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition-colors cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'orcamento'
                 ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-md shadow-amber-500/30'
                 : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
@@ -1122,12 +1161,13 @@ export const MaintenancePage: React.FC = () => {
                 {orcamentosCount}
               </span>
             )}
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={() => setStatusFilter('parcelado')}
-            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition cursor-pointer active:scale-[0.97] flex items-center gap-1.5 ${
+            className={`py-2 px-3.5 min-h-[40px] rounded-xl text-xs font-semibold border transition-colors cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'parcelado'
                 ? 'bg-blue-600 text-white border-blue-500 font-bold shadow-md shadow-blue-600/30'
                 : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
@@ -1146,7 +1186,7 @@ export const MaintenancePage: React.FC = () => {
                 {parceladosCount}
               </span>
             )}
-          </button>
+          </motion.button>
         </div>
 
         {/* CARD RESUMO EXCLUSIVO DA ABA PARCELADOS */}
@@ -1237,220 +1277,238 @@ export const MaintenancePage: React.FC = () => {
         )}
 
         {/* Lista de Registros */}
-        <div className="space-y-3">
-          {filteredLogs.map((item) => {
-            const total =
-              typeof item.valor_total === 'number'
-                ? item.valor_total
-                : item.valor_pecas + item.valor_mao_de_obra;
+        <motion.div
+          key={`${filterState.monthYear}-${filterState.periodChip}-${statusFilter}`}
+          variants={staggerContainerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-3"
+        >
+          <AnimatePresence mode="popLayout">
+            {filteredLogs.map((item) => {
+              const total =
+                typeof item.valor_total === 'number'
+                  ? item.valor_total
+                  : item.valor_pecas + item.valor_mao_de_obra;
 
-            const isOrcamento = item.status === 'orcamento';
-            const isWarrantyActive = !isOrcamento && item.garantia_ate && item.garantia_ate >= today;
-            const hasWarrantyExpired = !isOrcamento && item.garantia_ate && item.garantia_ate < today;
-            const instInfo = calculateMaintenanceInstallmentInfo(item, filterState.monthYear);
+              const isOrcamento = item.status === 'orcamento';
+              const isWarrantyActive = !isOrcamento && item.garantia_ate && item.garantia_ate >= today;
+              const hasWarrantyExpired = !isOrcamento && item.garantia_ate && item.garantia_ate < today;
+              const instInfo = calculateMaintenanceInstallmentInfo(item, filterState.monthYear);
 
-            const isConfirming = confirmDeleteId === item.id;
-            const isDeleting = deletingId === item.id;
-            const { fullBadge } = formatCardDateBadge(item.data, profile);
+              const isConfirming = confirmDeleteId === item.id;
+              const isDeleting = deletingId === item.id;
+              const { fullBadge } = formatCardDateBadge(item.data, profile);
 
-            return (
-              <div
-                key={item.id}
-                className={`bg-slate-900 border rounded-2xl p-4 sm:p-5 transition shadow-sm ${
-                  isOrcamento
-                    ? 'border-amber-500/40 hover:border-amber-500/60'
-                    : 'border-slate-800/80 hover:border-slate-700/80'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
-                        {fullBadge}
-                      </span>
-                      <span className="text-xs font-bold text-white truncate max-w-[180px] sm:max-w-xs">
-                        {item.oficina_nome}
-                      </span>
-
-                      {/* Badge de Status: Orçamento Pendente vs Serviço Concluído */}
-                      {isOrcamento ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                          <ClipboardList className="w-3 h-3" />
-                          Orçamento Pendente
+              return (
+                <motion.div
+                  key={item.id}
+                  layout
+                  variants={staggerItemVariants}
+                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
+                  className={`bg-slate-900 border rounded-2xl p-4 sm:p-5 transition shadow-sm ${
+                    isOrcamento
+                      ? 'border-amber-500/40 hover:border-amber-500/60'
+                      : 'border-slate-800/80 hover:border-slate-700/80'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
+                          {fullBadge}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                          <Wrench className="w-3 h-3" />
-                          Serviço Concluído
+                        <span className="text-xs font-bold text-white truncate max-w-[180px] sm:max-w-xs">
+                          {item.oficina_nome}
                         </span>
-                      )}
 
-                      {/* Badge de Parcelamento */}
-                      {instInfo.isParcelado && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300 border border-blue-500/30">
-                          <CreditCard className="w-3 h-3 text-blue-400" />
-                          {item.qtd_parcelas}x de {formatCurrency(instInfo.valorParcela)}
-                        </span>
-                      )}
+                        {/* Badge de Status: Orçamento Pendente vs Serviço Concluído */}
+                        {isOrcamento ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <ClipboardList className="w-3 h-3" />
+                            Orçamento Pendente
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            <Wrench className="w-3 h-3" />
+                            Serviço Concluído
+                          </span>
+                        )}
 
-                      {/* Badge de Garantia (apenas para serviços realizados) */}
-                      {isWarrantyActive && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                          <ShieldCheck className="w-3 h-3" />
-                          Na Garantia (até {formatDate(item.garantia_ate!)})
-                        </span>
-                      )}
+                        {/* Badge de Parcelamento */}
+                        {instInfo.isParcelado && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                            <CreditCard className="w-3 h-3 text-blue-400" />
+                            {item.qtd_parcelas}x de {formatCurrency(instInfo.valorParcela)}
+                          </span>
+                        )}
 
-                      {hasWarrantyExpired && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700">
-                          <ShieldAlert className="w-3 h-3" />
-                          Garantia Expirada ({formatDate(item.garantia_ate!)})
-                        </span>
-                      )}
-                    </div>
+                        {/* Badge de Garantia (apenas para serviços realizados) */}
+                        {isWarrantyActive && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            <ShieldCheck className="w-3 h-3" />
+                            Na Garantia (até {formatDate(item.garantia_ate!)})
+                          </span>
+                        )}
 
-                    <div
-                      className={`text-xl sm:text-2xl font-black mt-1.5 font-mono ${
-                        isOrcamento ? 'text-amber-400' : 'text-blue-400'
-                      }`}
-                    >
-                      {formatCurrency(total)}
-                    </div>
-                  </div>
-
-                  {/* Ações */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* Botão Ver Comprovante */}
-                    {item.comprovante_url && (
-                      <a
-                        href={item.comprovante_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={isOrcamento ? 'Ver Orçamento Anexado' : 'Ver Nota Fiscal / Comprovante'}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-semibold transition active:scale-[0.96]"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">
-                          {isOrcamento ? 'Anexo' : 'Comprovante'}
-                        </span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-
-                    {/* Botão Editar */}
-                    {!isConfirming && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setModalMode('edit');
-                          setEditingMaintenanceLog(item);
-                        }}
-                        aria-label="Editar registro"
-                        title="Editar este registro"
-                        className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
-                      >
-                        <Pencil className="w-4 h-4" />
-                        <span className="hidden sm:inline">Editar</span>
-                      </button>
-                    )}
-
-                    {/* Excluir */}
-                    {isConfirming ? (
-                      <div className="flex items-center gap-1 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
-                        <span className="text-[11px] font-semibold text-rose-300 px-1">
-                          Excluir?
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={isDeleting}
-                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
-                        >
-                          {isDeleting ? '...' : 'Sim'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
-                        >
-                          Não
-                        </button>
+                        {hasWarrantyExpired && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700">
+                            <ShieldAlert className="w-3 h-3" />
+                            Garantia Expirada ({formatDate(item.garantia_ate!)})
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(item.id)}
-                        aria-label="Excluir registro"
-                        title="Excluir este registro"
-                        className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
 
-                {/* Descrição do Serviço */}
-                <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  {item.descricao_servico}
-                </p>
-
-                {/* Badges de Valores */}
-                <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                  <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                    Peças: <strong className="text-slate-200">{formatCurrency(item.valor_pecas)}</strong>
-                  </span>
-                  <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                    Mão de Obra: <strong className="text-slate-200">{formatCurrency(item.valor_mao_de_obra)}</strong>
-                  </span>
-                </div>
-
-                {/* BLOCO DE GESTÃO DE PARCELAS */}
-                {instInfo.isParcelado && (
-                  <div className="mt-3 p-3 sm:p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-xs flex-wrap gap-1">
-                      <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                        <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                        <span>{instInfo.badgeLabel}</span>
-                      </span>
-                      <span className="text-[11px] font-mono text-blue-400 font-bold">
-                        {instInfo.progressPercent}% quitado
-                      </span>
-                    </div>
-
-                    {/* Barra de Progresso Visual */}
-                    <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-blue-500 to-emerald-400 h-full rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(instInfo.progressPercent, 100)}%` }}
-                      />
+                        className={`text-xl sm:text-2xl font-black mt-1.5 font-mono ${
+                          isOrcamento ? 'text-amber-400' : 'text-blue-400'
+                        }`}
+                      >
+                        {formatCurrency(total)}
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono pt-0.5 flex-wrap gap-1">
-                      <span>1ª Parcela: {formatDate(instInfo.firstInstallmentDate)}</span>
-                      <span>Impacto mensal no caixa: {formatCurrency(instInfo.valorParcela)}</span>
+                    {/* Ações */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Botão Ver Comprovante */}
+                      {item.comprovante_url && (
+                        <motion.a
+                          whileTap={{ scale: 0.95 }}
+                          href={item.comprovante_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={isOrcamento ? 'Ver Orçamento Anexado' : 'Ver Nota Fiscal / Comprovante'}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-semibold transition cursor-pointer"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">
+                            {isOrcamento ? 'Anexo' : 'Comprovante'}
+                          </span>
+                          <ExternalLink className="w-3 h-3" />
+                        </motion.a>
+                      )}
+
+                      {/* Botão Editar */}
+                      {!isConfirming && (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          type="button"
+                          onClick={() => {
+                            setModalMode('edit');
+                            setEditingMaintenanceLog(item);
+                          }}
+                          aria-label="Editar registro"
+                          title="Editar este registro"
+                          className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 transition cursor-pointer text-xs font-semibold"
+                        >
+                          <Pencil className="w-4 h-4" />
+                          <span className="hidden sm:inline">Editar</span>
+                        </motion.button>
+                      )}
+
+                      {/* Excluir */}
+                      {isConfirming ? (
+                        <div className="flex items-center gap-1 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
+                          <span className="text-[11px] font-semibold text-rose-300 px-1">
+                            Excluir?
+                          </span>
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            type="button"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={isDeleting}
+                            className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer"
+                          >
+                            {isDeleting ? '...' : 'Sim'}
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            type="button"
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer"
+                          >
+                            Não
+                          </motion.button>
+                        </div>
+                      ) : (
+                        <motion.button
+                          whileTap={{ scale: 0.92 }}
+                          type="button"
+                          onClick={() => setConfirmDeleteId(item.id)}
+                          aria-label="Excluir registro"
+                          title="Excluir este registro"
+                          className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* BOTÃO RÁPIDO: APROVAR E CONVERTER ORÇAMENTO EM SERVIÇO REALIZADO */}
-                {isOrcamento && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModalMode('approve');
-                      setEditingMaintenanceLog(item);
-                    }}
-                    className="w-full mt-3.5 py-3 px-4 min-h-[44px] rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:from-emerald-600 active:to-teal-600 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition active:scale-[0.98] shadow-lg shadow-emerald-500/25 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4 stroke-[2.8]" />
-                    <span>Aprovar e Concluir Serviço</span>
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  {/* Descrição do Serviço */}
+                  <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    {item.descricao_servico}
+                  </p>
+
+                  {/* Badges de Valores */}
+                  <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                    <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+                      Peças: <strong className="text-slate-200">{formatCurrency(item.valor_pecas)}</strong>
+                    </span>
+                    <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
+                      Mão de Obra: <strong className="text-slate-200">{formatCurrency(item.valor_mao_de_obra)}</strong>
+                    </span>
+                  </div>
+
+                  {/* BLOCO DE GESTÃO DE PARCELAS */}
+                  {instInfo.isParcelado && (
+                    <div className="mt-3 p-3 sm:p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                        <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                          <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                          <span>{instInfo.badgeLabel}</span>
+                        </span>
+                        <span className="text-[11px] font-mono text-blue-400 font-bold">
+                          {instInfo.progressPercent}% quitado
+                        </span>
+                      </div>
+
+                      {/* Barra de Progresso Visual */}
+                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-emerald-400 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(instInfo.progressPercent, 100)}%` }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono pt-0.5 flex-wrap gap-1">
+                        <span>1ª Parcela: {formatDate(instInfo.firstInstallmentDate)}</span>
+                        <span>Impacto mensal no caixa: {formatCurrency(instInfo.valorParcela)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* BOTÃO RÁPIDO: APROVAR E CONVERTER ORÇAMENTO EM SERVIÇO REALIZADO */}
+                  {isOrcamento && (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      whileHover={{ scale: 1.01 }}
+                      type="button"
+                      onClick={() => {
+                        setModalMode('approve');
+                        setEditingMaintenanceLog(item);
+                      }}
+                      className="w-full mt-3.5 py-3 px-4 min-h-[44px] rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:from-emerald-600 active:to-teal-600 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/25 cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-4 h-4 stroke-[2.8]" />
+                      <span>Aprovar e Concluir Serviço</span>
+                    </motion.button>
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
       </section>
 
       {/* Modal Responsivo de Edição / Aprovação de Manutenção */}

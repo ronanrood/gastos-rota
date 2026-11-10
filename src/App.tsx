@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/useAuth';
 import { AuthPage } from './components/auth/AuthPage';
@@ -12,6 +13,7 @@ import { MaintenancePage } from './components/maintenance/MaintenancePage';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { ToolsPage } from './components/tools/ToolsPage';
 import { AdminPage } from './components/admin/AdminPage';
+import { PageTransition } from './components/common/PageTransition';
 import { Truck, ShieldAlert, LogOut } from 'lucide-react';
 
 const VIEW_TO_HASH: Record<ViewType, string> = {
@@ -151,14 +153,18 @@ const MainContent: React.FC = () => {
 
   return (
     <AppLayout currentView={effectiveView} onSelectView={handleSelectView}>
-      {effectiveView === 'earnings' && <DailyEarningsPage />}
-      {effectiveView === 'dashboard' && <DashboardPage />}
-      {effectiveView === 'fuel' && <FuelPage />}
-      {effectiveView === 'maintenance' && <MaintenancePage />}
-      {effectiveView === 'vehicle' && <VehiclePage />}
-      {effectiveView === 'tools' && <ToolsPage />}
-      {effectiveView === 'profile' && <ProfilePage />}
-      {effectiveView === 'admin' && <AdminPage />}
+      <AnimatePresence mode="wait">
+        <PageTransition key={effectiveView}>
+          {effectiveView === 'earnings' && <DailyEarningsPage />}
+          {effectiveView === 'dashboard' && <DashboardPage />}
+          {effectiveView === 'fuel' && <FuelPage />}
+          {effectiveView === 'maintenance' && <MaintenancePage />}
+          {effectiveView === 'vehicle' && <VehiclePage />}
+          {effectiveView === 'tools' && <ToolsPage />}
+          {effectiveView === 'profile' && <ProfilePage />}
+          {effectiveView === 'admin' && <AdminPage />}
+        </PageTransition>
+      </AnimatePresence>
     </AppLayout>
   );
 };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Coins, Fuel, Wrench, BarChart3, Menu } from 'lucide-react';
 import type { ViewType } from './Drawer';
 
@@ -47,35 +48,46 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           const isActive = currentView === item.id;
 
           return (
-            <button
+            <motion.button
               key={item.id}
               type="button"
+              whileTap={{ scale: 0.92 }}
               onClick={() => onSelectView(item.id)}
-              className={`flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-2xl transition-all duration-150 active:scale-[0.94] cursor-pointer ${
+              className={`relative flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-2xl transition-colors cursor-pointer select-none ${
                 isActive
                   ? 'text-emerald-400 font-bold'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <div
-                className={`p-1 rounded-xl transition-colors ${
-                  isActive ? 'bg-emerald-500/15 text-emerald-400' : 'text-slate-400'
-                }`}
+              {/* Pílula ativa deslizante (layoutId) */}
+              {isActive && (
+                <motion.div
+                  layoutId="bottomNavActiveTabIndicator"
+                  className="absolute inset-x-1.5 inset-y-1.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 -z-10"
+                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                />
+              )}
+
+              <motion.div
+                animate={{ scale: isActive ? 1.08 : 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="p-1 rounded-xl"
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-              </div>
+              </motion.div>
               <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] text-center">
                 {item.label}
               </span>
-            </button>
+            </motion.button>
           );
         })}
 
         {/* Botão para abrir gaveta completa */}
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.92 }}
           onClick={onOpenDrawer}
-          className="flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-2xl text-slate-400 hover:text-slate-200 active:scale-[0.94] transition-all cursor-pointer"
+          className="flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-2xl text-slate-400 hover:text-slate-200 transition-colors cursor-pointer select-none"
         >
           <div className="p-1 rounded-xl bg-slate-800/60 text-slate-300">
             <Menu className="w-5 h-5 stroke-[2]" />
@@ -83,7 +95,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] text-center font-medium">
             Menu
           </span>
-        </button>
+        </motion.button>
       </div>
     </nav>
   );

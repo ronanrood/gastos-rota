@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Coins,
   BarChart3,
@@ -129,22 +130,29 @@ export const Drawer: React.FC<DrawerProps> = ({
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        role="presentation"
-        onClick={onClose}
-        className={`fixed inset-0 z-50 bg-black/70 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
-          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      />
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop com fade-in e blur */}
+            <motion.div
+              role="presentation"
+              onClick={onClose}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm cursor-pointer"
+            />
 
-      {/* Drawer Panel */}
-      <aside
-        aria-label="Menu principal"
-        className={`fixed inset-y-0 left-0 z-50 w-[85vw] sm:w-80 sm:max-w-xs bg-slate-900 border-r border-slate-800 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
+            {/* Drawer Panel com física de mola */}
+            <motion.aside
+              aria-label="Menu principal"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+              className="fixed inset-y-0 left-0 z-50 w-[85vw] sm:w-80 sm:max-w-xs bg-slate-900 border-r border-slate-800 shadow-2xl flex flex-col"
+            >
         {/* Drawer Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -252,11 +260,13 @@ export const Drawer: React.FC<DrawerProps> = ({
             const isActive = currentView === item.id;
 
             return (
-              <button
+              <motion.button
                 key={item.id}
                 type="button"
+                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.01 }}
                 onClick={() => handleItemClick(item.id)}
-                className={`w-full min-h-[48px] text-left flex items-center justify-between p-3 rounded-2xl transition-all group cursor-pointer active:scale-[0.98] ${
+                className={`w-full min-h-[48px] text-left flex items-center justify-between p-3 rounded-2xl transition-colors group cursor-pointer ${
                   isActive
                     ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/20'
                     : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
@@ -300,7 +310,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                     }`}
                   />
                 </div>
-              </button>
+              </motion.button>
             );
           })}
         </nav>
@@ -322,7 +332,10 @@ export const Drawer: React.FC<DrawerProps> = ({
             Gastos Rota v1.0 • Mobile-First
           </p>
         </div>
-      </aside>
+      </motion.aside>
+    </>
+  )}
+</AnimatePresence>
 
       {/* Modal de Configuração de Recebimento */}
       <PaymentConfigModal

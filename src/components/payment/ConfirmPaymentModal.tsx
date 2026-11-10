@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   CheckCircle2,
@@ -13,6 +14,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import type { PaymentCycleRecord, PaymentCycleUpsert } from '../../types/database';
 import { type PaymentCycleInfo, getLocalDateString } from '../../utils/paymentCycles';
+import { modalBackdropVariants, modalContentVariants } from '../common/MotionVariants';
 
 interface ConfirmPaymentModalProps {
   isOpen: boolean;
@@ -394,18 +396,37 @@ export const ConfirmPaymentModal: React.FC<ConfirmPaymentModalProps> = ({
   onSaveSuccess,
   onRevertSuccess,
 }) => {
-  if (!isOpen || !cycle) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs">
-      <ConfirmPaymentForm
-        key={cycle.referenciaChave}
-        cycle={cycle}
-        userId={userId}
-        onClose={onClose}
-        onSaveSuccess={onSaveSuccess}
-        onRevertSuccess={onRevertSuccess}
-      />
-    </div>
+    <AnimatePresence>
+      {isOpen && cycle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+          <motion.div
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            onClick={onClose}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+          />
+
+          <motion.div
+            variants={modalContentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="w-full max-w-lg relative z-10 my-auto"
+          >
+            <ConfirmPaymentForm
+              key={cycle.referenciaChave}
+              cycle={cycle}
+              userId={userId}
+              onClose={onClose}
+              onSaveSuccess={onSaveSuccess}
+              onRevertSuccess={onRevertSuccess}
+            />
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };

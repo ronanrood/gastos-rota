@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Fuel,
   Package,
@@ -22,6 +23,7 @@ import { supabase } from '../../lib/supabase';
 import type { Vehicle, FuelType, FuelLog } from '../../types/database';
 import { formatCurrency } from '../../utils/exportUtils';
 import { QuickFuelModal } from './QuickFuelModal';
+import { AnimatedCounter } from '../common/AnimatedCounter';
 
 export const ToolsPage: React.FC = () => {
   const { user } = useAuth();
@@ -525,57 +527,97 @@ export const ToolsPage: React.FC = () => {
 
       {/* SELETOR DE ABAS DAS 4 FERRAMENTAS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 bg-slate-950/80 border border-slate-800 rounded-2xl">
-        <button
+        <motion.button
+          whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('combustivel')}
-          className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition active:scale-[0.98] cursor-pointer ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             activeTab === 'combustivel'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+              ? 'text-white shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
           }`}
         >
-          <Fuel className="w-4 h-4 shrink-0" />
-          <span className="truncate">1. Combustível</span>
-        </button>
+          {activeTab === 'combustivel' && (
+            <motion.div
+              layoutId="toolsActiveTabIndicator"
+              className="absolute inset-0 bg-emerald-600 rounded-xl shadow-lg shadow-emerald-600/30"
+              transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center gap-2 truncate">
+            <Fuel className="w-4 h-4 shrink-0" />
+            <span className="truncate">1. Combustível</span>
+          </span>
+        </motion.button>
 
-        <button
+        <motion.button
+          whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('viabilidade')}
-          className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition active:scale-[0.98] cursor-pointer ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             activeTab === 'viabilidade'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+              ? 'text-white shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
           }`}
         >
-          <Package className="w-4 h-4 shrink-0" />
-          <span className="truncate">2. Viabilidade</span>
-        </button>
+          {activeTab === 'viabilidade' && (
+            <motion.div
+              layoutId="toolsActiveTabIndicator"
+              className="absolute inset-0 bg-blue-600 rounded-xl shadow-lg shadow-blue-600/30"
+              transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center gap-2 truncate">
+            <Package className="w-4 h-4 shrink-0" />
+            <span className="truncate">2. Viabilidade</span>
+          </span>
+        </motion.button>
 
-        <button
+        <motion.button
+          whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('metas')}
-          className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition active:scale-[0.98] cursor-pointer ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             activeTab === 'metas'
-              ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/30'
+              ? 'text-slate-950 font-black shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
           }`}
         >
-          <Target className="w-4 h-4 shrink-0" />
-          <span className="truncate">3. Meta Diária</span>
-        </button>
+          {activeTab === 'metas' && (
+            <motion.div
+              layoutId="toolsActiveTabIndicator"
+              className="absolute inset-0 bg-amber-500 rounded-xl shadow-lg shadow-amber-500/30"
+              transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center gap-2 truncate">
+            <Target className="w-4 h-4 shrink-0" />
+            <span className="truncate">3. Meta Diária</span>
+          </span>
+        </motion.button>
 
-        <button
+        <motion.button
+          whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('custo_km')}
-          className={`flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition active:scale-[0.98] cursor-pointer ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             activeTab === 'custo_km'
-              ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/30'
+              ? 'text-white shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
           }`}
         >
-          <Gauge className="w-4 h-4 shrink-0" />
-          <span className="truncate">4. Custo / KM</span>
-        </button>
+          {activeTab === 'custo_km' && (
+            <motion.div
+              layoutId="toolsActiveTabIndicator"
+              className="absolute inset-0 bg-teal-600 rounded-xl shadow-lg shadow-teal-600/30"
+              transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center gap-2 truncate">
+            <Gauge className="w-4 h-4 shrink-0" />
+            <span className="truncate">4. Custo / KM</span>
+          </span>
+        </motion.button>
       </div>
 
       {/* ======================================================== */}
@@ -765,17 +807,18 @@ export const ToolsPage: React.FC = () => {
                       )}
                     </div>
                     <span className="text-xl font-black font-mono block mt-1">
-                      {formatCurrency(fuelCalc.custoEtaKm)} <span className="text-xs font-normal text-slate-400">/ km</span>
+                      <AnimatedCounter value={fuelCalc.custoEtaKm} formatAsCurrency /> <span className="text-xs font-normal text-slate-400">/ km</span>
                     </span>
                   </div>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={() => handleOpenQuickFuel('etanol')}
-                    className="w-full min-h-[38px] py-1.5 px-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                    className="w-full min-h-[38px] py-1.5 px-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
                     <span>Abastecer com Etanol</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  </motion.button>
                 </div>
 
                 <div className={`p-3.5 rounded-2xl border flex flex-col justify-between gap-3 ${fuelCalc.vencedor.name === 'Gasolina' ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-md shadow-emerald-500/10' : 'bg-slate-950/60 border-slate-800 text-slate-400'}`}>
@@ -787,17 +830,18 @@ export const ToolsPage: React.FC = () => {
                       )}
                     </div>
                     <span className="text-xl font-black font-mono block mt-1">
-                      {formatCurrency(fuelCalc.custoGasKm)} <span className="text-xs font-normal text-slate-400">/ km</span>
+                      <AnimatedCounter value={fuelCalc.custoGasKm} formatAsCurrency /> <span className="text-xs font-normal text-slate-400">/ km</span>
                     </span>
                   </div>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={() => handleOpenQuickFuel('gasolina')}
-                    className="w-full min-h-[38px] py-1.5 px-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                    className="w-full min-h-[38px] py-1.5 px-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
                     <span>Abastecer com Gasolina</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  </motion.button>
                 </div>
 
                 {fuelCalc.custoGnvKm !== null && (
@@ -810,17 +854,18 @@ export const ToolsPage: React.FC = () => {
                         )}
                       </div>
                       <span className="text-xl font-black font-mono block mt-1">
-                        {formatCurrency(fuelCalc.custoGnvKm)} <span className="text-xs font-normal text-slate-400">/ km</span>
+                        <AnimatedCounter value={fuelCalc.custoGnvKm} formatAsCurrency /> <span className="text-xs font-normal text-slate-400">/ km</span>
                       </span>
                     </div>
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
                       type="button"
                       onClick={() => handleOpenQuickFuel('gnv')}
-                      className="w-full min-h-[38px] py-1.5 px-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                      className="w-full min-h-[38px] py-1.5 px-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
                     >
                       <span>Abastecer com GNV</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    </motion.button>
                   </div>
                 )}
               </div>
@@ -858,14 +903,16 @@ export const ToolsPage: React.FC = () => {
 
               {/* BOTÃO PRINCIPAL DE AÇÃO RÁPIDA: ABASTECI COM [VENCEDOR] */}
               <div className="pt-2">
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.01 }}
                   type="button"
                   onClick={() => handleOpenQuickFuel(fuelCalc.vencedor.name.toLowerCase() as FuelType)}
-                  className="w-full min-h-[48px] h-12 sm:h-14 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm sm:text-base shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
+                  className="w-full min-h-[48px] h-12 sm:h-14 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm sm:text-base shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 transition cursor-pointer"
                 >
                   <Fuel className="w-5 h-5 shrink-0" />
                   <span>⛽ Abasteci com {fuelCalc.vencedor.name} → Registrar Agora</span>
-                </button>
+                </motion.button>
               </div>
             </div>
           </div>
@@ -1585,40 +1632,49 @@ export const ToolsPage: React.FC = () => {
       )}
 
       {/* TOAST DE SUCESSO DO ABASTECIMENTO */}
-      {quickFuelToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md bg-emerald-950/95 border border-emerald-500/60 rounded-2xl p-4 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-in slide-in-from-bottom-5 duration-200">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
+      <AnimatePresence>
+        {quickFuelToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md bg-emerald-950/95 border border-emerald-500/60 rounded-2xl p-4 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-black text-white truncate">
+                  Abastecimento registrado com sucesso!
+                </p>
+                <p className="text-[11px] sm:text-xs text-emerald-300 truncate">
+                  {quickFuelToast.litros.toFixed(2)} {quickFuelToast.unidade} de {quickFuelToast.tipo} ({formatCurrency(quickFuelToast.valor)})
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-black text-white truncate">
-                Abastecimento registrado com sucesso!
-              </p>
-              <p className="text-[11px] sm:text-xs text-emerald-300 truncate">
-                {quickFuelToast.litros.toFixed(2)} {quickFuelToast.unidade} de {quickFuelToast.tipo} ({formatCurrency(quickFuelToast.valor)})
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <a
-              href="#combustivel"
-              className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition cursor-pointer whitespace-nowrap active:scale-95"
-            >
-              Ver Histórico
-            </a>
-            <button
-              type="button"
-              onClick={() => setQuickFuelToast(null)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
-              aria-label="Fechar aviso"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+            <div className="flex items-center gap-2 shrink-0">
+              <motion.a
+                whileTap={{ scale: 0.94 }}
+                href="#combustivel"
+                className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition cursor-pointer whitespace-nowrap"
+              >
+                Ver Histórico
+              </motion.a>
+              <button
+                type="button"
+                onClick={() => setQuickFuelToast(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                aria-label="Fechar aviso"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
