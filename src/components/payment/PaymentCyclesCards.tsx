@@ -8,6 +8,7 @@ import { PaymentConfigModal } from './PaymentConfigModal';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { triggerSuccessCelebration } from '../../lib/celebrate';
+import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   CalendarDays,
   Calendar,
@@ -98,6 +99,7 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
   const activeRecords = externalRecords ?? internalRecords;
 
   const [defaultMonth] = useState<string>(getCurrentMonthYear);
+  const [todayDay] = useState<number>(() => new Date().getDate());
 
   // Mês de referência ativo
   const activeMonthStr = useMemo(() => {
@@ -116,6 +118,11 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
   const { tipo, cycles } = useMemo(() => {
     return computePaymentCycles(earnings, profile, activeMonthStr, activeRecords);
   }, [earnings, profile, activeMonthStr, activeRecords]);
+
+  // Foca automaticamente no ciclo da 2ª quinzena caso hoje seja após o dia 16
+  const defaultCycleIndex = useMemo(() => {
+    return todayDay >= 16 && cycles.length > 1 ? 1 : 0;
+  }, [todayDay, cycles.length]);
 
   // Celebração discreta caso o ciclo ativo atinja a meta pela 1ª vez nesta sessão
   useEffect(() => {
@@ -205,11 +212,11 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
           </button>
         </div>
 
-        {/* CARDS DOS CICLOS */}
-        <div
-          className={`grid gap-3 ${
-            tipo === 'quinzenal' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
-          }`}
+        {/* CARDS DOS CICLOS (Carrossel Horizontal no Mobile com Scroll-Snap e Peek Effect) */}
+        <SwipeableCarousel
+          totalItems={cycles.length}
+          initialIndex={defaultCycleIndex}
+          gridClassName={tipo === 'quinzenal' ? 'md:grid-cols-2 md:gap-3' : 'md:grid-cols-1'}
         >
           {cycles.map((cycle, index) => {
             const isFirst = index === 0;
@@ -235,7 +242,7 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
                     setSelectedCycleDetails(cycle);
                   }
                 }}
-                className={`group text-left p-4 sm:p-5 rounded-3xl border transition-all duration-300 cursor-pointer relative overflow-hidden backdrop-blur-md shadow-lg hover:shadow-xl flex flex-col justify-between ${
+                className={`min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto group text-left p-4 sm:p-5 rounded-3xl border transition-all duration-300 cursor-pointer relative overflow-hidden backdrop-blur-md shadow-lg hover:shadow-xl flex flex-col justify-between ${
                   isHighlighted
                     ? 'bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 border-emerald-400 ring-2 ring-emerald-500/80 shadow-lg shadow-emerald-500/30'
                     : isPaid
@@ -429,7 +436,7 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
               </div>
             );
           })}
-        </div>
+        </SwipeableCarousel>
       </div>
 
       {/* MODAL DE DETALHAMENTO DO CICLO AO CLICAR NO CARD */}

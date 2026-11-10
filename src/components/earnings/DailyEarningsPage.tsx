@@ -21,12 +21,12 @@ import {
   Sparkles,
   Info,
   ChevronDown,
-  ChevronUp,
-  Eye,
-  EyeOff,
   Pencil,
   RotateCcw,
+  Plus,
 } from 'lucide-react';
+import { BottomSheetModal } from '../common/BottomSheetModal';
+import { FloatingActionButton } from '../common/FloatingActionButton';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
 import { PaymentCyclesHistory } from '../payment/PaymentCyclesHistory';
 import { EditEarningModal } from './EditEarningModal';
@@ -80,6 +80,43 @@ export const DailyEarningsPage: React.FC = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingEarning, setEditingEarning] = useState<DailyEarning | null>(null);
 
+  // Estados para expansão inteligente tipo Accordion nos cards de histórico
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isAllExpanded, setIsAllExpanded] = useState<boolean>(false);
+
+  // Controle da Gaveta Inferior (Bottom Sheet) no Mobile
+  const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+
+  const toggleItemExpand = useCallback((id: string) => {
+    setIsAllExpanded(false);
+    setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const toggleAllExpanded = useCallback(() => {
+    setIsAllExpanded((prev) => !prev);
+    setExpandedId(null);
+  }, []);
+
+  const handleOpenNewForm = useCallback(() => {
+    setData(new Date().toISOString().split('T')[0]);
+    setQtdPecas('');
+    if (profile?.valor_padrao_peca) {
+      setValorUnitarioPeca(profile.valor_padrao_peca.toString());
+    }
+    setValorExtraBonus('0');
+    setKmRodado('');
+    setObservacoes('');
+    setFormError(null);
+    setIsFormOpen(true);
+
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      const el = document.getElementById('daily-earnings-form-section');
+      el?.scrollIntoView({ behavior: 'smooth' });
+      const firstInput = el?.querySelector('input');
+      firstInput?.focus();
+    }
+  }, [profile]);
+
   const handleEditSuccess = (updated: DailyEarning) => {
     setEarningsList((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     setFormSuccess('Lançamento atualizado com sucesso!');
@@ -108,27 +145,6 @@ export const DailyEarningsPage: React.FC = () => {
           : r
       )
     );
-  };
-
-  // Controle de recolhimento da seção Últimos Lançamentos (com persistência local)
-  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('gastos_rota_earnings_history_collapsed') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const toggleHistoryCollapsed = () => {
-    setIsHistoryCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('gastos_rota_earnings_history_collapsed', String(next));
-      } catch {
-        // ignora se localStorage não disponível
-      }
-      return next;
-    });
   };
 
   // Visor em tempo real do Total Bruto Estimado
@@ -364,16 +380,11 @@ export const DailyEarningsPage: React.FC = () => {
       }
 
       setFormSuccess('Lançamento registrado com sucesso!');
+      setIsFormOpen(false);
 
-      // Atualiza a lista local com o registro retornado do banco e desrecolhe para visualização
+      // Atualiza a lista local com o registro retornado do banco
       if (inserted) {
         setEarningsList((prev) => [inserted as DailyEarning, ...prev]);
-        setIsHistoryCollapsed(false);
-        try {
-          localStorage.setItem('gastos_rota_earnings_history_collapsed', 'false');
-        } catch {
-          // ignora se localStorage não disponível
-        }
 
         // Soma automaticamente o KM rodado ao odômetro atual do veículo
         if (numKm > 0) {
@@ -413,7 +424,6 @@ export const DailyEarningsPage: React.FC = () => {
         }
       } else {
         await refreshEarnings();
-        setIsHistoryCollapsed(false);
       }
 
       // Limpa os campos para o próximo lançamento mantendo a data e opcionalmente o valor da peça
@@ -487,8 +497,270 @@ export const DailyEarningsPage: React.FC = () => {
     return getMostUrgentMaintenanceAlert(vehicle, vehicle.km_atual || 0);
   }, [vehicle]);
 
+  // Renderiza o formulário de ganho diário (compartilhado entre a coluna lateral desktop e o Bottom Sheet mobile)
+  const renderEarningsForm = (isModal: boolean = false) => (
+    <div
+      className={`space-y-4 ${
+        isModal
+          ? ''
+          : 'bg-slate-900 border border-slate-800/90 rounded-3xl shadow-2xl p-5 sm:p-7 relative overflow-hidden backdrop-blur-md'
+      }`}
+    >
+      {!isModal && (
+        <>
+          {/* Decorative corner glow */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Header do Card Desktop */}
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-md shadow-emerald-500/20 font-bold">
+                <PlusCircle className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <div>
+                <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+                  Novo Lançamento Diário
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Registre os dados da sua rota de hoje
+                </p>
+              </div>
+            </div>
+
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              Tempo real
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* FEEDBACKS (ERRO / SUCESSO) */}
+      {formError && (
+        <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs sm:text-sm flex items-start gap-2.5">
+          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">Erro ao salvar</p>
+            <p className="text-rose-300/90">{formError}</p>
+          </div>
+        </div>
+      )}
+
+      {formSuccess && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-start gap-2.5">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="flex-1 font-semibold">{formSuccess}</div>
+        </div>
+      )}
+
+      {/* VISOR DE TOTAL BRUTO ESTIMADO (Destaque Principal) */}
+      <div className="rounded-2xl bg-gradient-to-br from-slate-950 to-slate-900 border-2 border-emerald-500/40 p-4 sm:p-5 relative shadow-inner">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-400">
+              <TrendingUp className="w-4 h-4" />
+              Total Bruto Estimado
+            </div>
+            {rendimentoPorKmEstimado > 0 && (
+              <span className="bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/30 font-semibold font-mono text-[11px]">
+                {formatCurrency(rendimentoPorKmEstimado)}/km
+              </span>
+            )}
+          </div>
+          <div className="text-3xl sm:text-4xl font-black text-white tracking-tight font-mono">
+            <AnimatedCounter value={totalBrutoEstimado} formatAsCurrency />
+          </div>
+
+          {/* Badges explicativos do cálculo */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-800 text-[11px] text-slate-300 font-mono">
+            <span className="bg-slate-800/90 px-2 py-0.5 rounded-md border border-slate-700/60">
+              {numPecas} un. × {formatCurrency(numValorUnit)}
+            </span>
+            {numBonus > 0 && (
+              <>
+                <span className="text-slate-500">+</span>
+                <span className="bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/30">
+                  {formatCurrency(numBonus)} bônus
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* FORMULÁRIO DE LANÇAMENTO */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Campo: Data */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Data do Lançamento
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <input
+                type="date"
+                required
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+              />
+            </div>
+          </div>
+
+          {/* Campo: Quantidade de Peças */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Quantidade de Peças
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Package className="w-4 h-4" />
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                required
+                min="0"
+                step="1"
+                placeholder="Ex: 85"
+                value={qtdPecas}
+                onChange={(e) => setQtdPecas(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Campo: Valor Unitário por Peça */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300">
+                Valor por Peça (R$)
+              </label>
+              {profile?.valor_padrao_peca && (
+                <button
+                  type="button"
+                  onClick={() => setValorUnitarioPeca(profile.valor_padrao_peca!.toString())}
+                  className="text-[10px] text-emerald-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                  title="Usar valor padrão cadastrado no perfil"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  Padrão ({formatCurrency(profile.valor_padrao_peca)})
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <DollarSign className="w-4 h-4" />
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                required
+                min="0"
+                step="0.01"
+                placeholder="Ex: 4.50"
+                value={valorUnitarioPeca}
+                onChange={(e) => setValorUnitarioPeca(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Campo: Bônus Extra */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Bônus / Extra (R$)
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Gift className="w-4 h-4" />
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={valorExtraBonus}
+                onChange={(e) => setValorExtraBonus(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Campo: KM Rodado */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              KM Rodado na Rota (Opcional)
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Gauge className="w-4 h-4" />
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.1"
+                placeholder="Ex: 120"
+                value={kmRodado}
+                onChange={(e) => setKmRodado(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Campo: Observações */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Observações / Nome da Rota (Opcional)
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 pt-3 pointer-events-none text-slate-400">
+                <FileText className="w-4 h-4" />
+              </div>
+              <textarea
+                rows={2}
+                placeholder="Ex: Rota centro + 2 coletas extras..."
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Botão de Salvar */}
+        <div className="pt-2">
+          <motion.button
+            type="submit"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.96 }}
+            disabled={submitting}
+            className="w-full h-12 min-h-[48px] px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {submitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                Salvando Lançamento...
+              </>
+            ) : (
+              <>
+                <PlusCircle className="w-5 h-5 stroke-[2.2]" />
+                Salvar Lançamento do Dia
+              </>
+            )}
+          </motion.button>
+        </div>
+      </form>
+    </div>
+  );
+
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* ALERTA DISCRETO DE MANUTENÇÃO PREVENTIVA */}
       {healthAlert && (
         <motion.a
@@ -578,351 +850,101 @@ export const DailyEarningsPage: React.FC = () => {
         onRefresh={refreshEarnings}
       />
 
-      {/* CARD PRINCIPAL: ENCARTE DE LANÇAMENTO DIÁRIO */}
-      <section className="bg-slate-900 border border-slate-800/90 rounded-3xl shadow-2xl p-5 sm:p-7 relative overflow-hidden backdrop-blur-md">
-        {/* Decorative corner glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Header do Card */}
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-md shadow-emerald-500/20 font-bold">
-              <PlusCircle className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-                Encarte de Lançamento Diário
-              </h2>
-              <p className="text-xs text-slate-400">
-                Registre os dados da sua rota de hoje
-              </p>
-            </div>
-          </div>
-
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            Cálculo em tempo real
-          </span>
+      {/* LAYOUT PRINCIPAL: No desktop, exibe o formulário na coluna lateral aberta (lg:grid) e o histórico na direita */}
+      <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
+        {/* FORMULÁRIO LATERAL NO DESKTOP (Aberto e fixo na visão desktop) */}
+        <div id="daily-earnings-form-section" className="hidden lg:block lg:col-span-5 sticky top-24">
+          {renderEarningsForm(false)}
         </div>
 
-        {/* FEEDBACKS (ERRO / SUCESSO) */}
-        {formError && (
-          <div className="mb-5 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs sm:text-sm flex items-start gap-2.5">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold">Erro ao salvar</p>
-              <p className="text-rose-300/90">{formError}</p>
-            </div>
-          </div>
-        )}
+        {/* COLUNA DO HISTÓRICO (Largura total no mobile, coluna direita no desktop) */}
+        <div className="lg:col-span-7 space-y-4">
+          {/* BARRA DE FILTRAGEM AVANÇADA (MÊS, QUINZENA, BUSCA E ORDENAÇÃO) */}
+          <HistoryFilterBar
+            filterState={filterState}
+            onFilterChange={setFilterState}
+            profile={profile}
+            searchPlaceholder="Buscar por observação, data (ex: 30/10), peças, bônus..."
+            totalFilteredCount={filteredEarningsList.length}
+          />
 
-        {formSuccess && (
-          <div className="mb-5 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-start gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="flex-1 font-semibold">{formSuccess}</div>
-          </div>
-        )}
+          {/* RESUMO DO FILTRO ATIVO (TOTALIZADOR DINÂMICO) */}
+          <EarningsFilterSummary
+            items={filteredEarningsList}
+            filterState={filterState}
+            profile={profile}
+            vehicle={vehicle}
+            paymentRecords={paymentRecords}
+            onPaymentRecordUpdated={handlePaymentRecordUpdated}
+            onPaymentRecordReverted={handlePaymentRecordReverted}
+          />
 
-        {/* VISOR DE TOTAL BRUTO ESTIMADO (Destaque Principal) */}
-        <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-950 to-slate-900 border-2 border-emerald-500/40 p-4 sm:p-5 relative shadow-inner">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-400">
-                <TrendingUp className="w-4 h-4" />
-                Total Bruto Estimado
-              </div>
-              <div className="text-3xl sm:text-4xl font-black text-white mt-1 tracking-tight">
-                <AnimatedCounter value={totalBrutoEstimado} formatAsCurrency />
-              </div>
-            </div>
-
-            {/* Badges explicativos do cálculo */}
-            <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 text-[11px] text-slate-300">
-              <span className="bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700/60 font-mono">
-                {numPecas} un. × {formatCurrency(numValorUnit)}
-              </span>
-              <span className="text-slate-500">+</span>
-              <span className="bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700/60 font-mono">
-                {formatCurrency(numBonus)} bônus
-              </span>
-              {rendimentoPorKmEstimado > 0 && (
-                <span className="bg-emerald-500/15 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/30 font-semibold font-mono">
-                  {formatCurrency(rendimentoPorKmEstimado)}/km
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* FORMULÁRIO DE LANÇAMENTO */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {/* Campo: Data */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Data do Lançamento
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Calendar className="w-4 h-4" />
+          {/* LISTAGEM: ÚLTIMOS LANÇAMENTOS DO MOTORISTA */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between px-1 gap-2 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    Últimos Lançamentos
+                  </h3>
+                  {earningsList.length > 0 && (
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
+                      {earningsList.length}
+                    </span>
+                  )}
                 </div>
-                <input
-                  type="date"
-                  required
-                  value={data}
-                  onChange={(e) => setData(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                />
+                <p className="text-xs text-slate-400">
+                  Histórico diário de produção e ganhos
+                </p>
               </div>
-            </div>
 
-            {/* Campo: Quantidade de Peças */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Quantidade de Peças 
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Package className="w-4 h-4" />
-                </div>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  required
-                  min="0"
-                  step="1"
-                  value={qtdPecas}
-                  onChange={(e) => setQtdPecas(e.target.value)}
-                  placeholder="Ex: 50"
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
-                />
-              </div>
-            </div>
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                {/* Botão de Ação Rápida no Cabeçalho da Lista */}
+                <button
+                  type="button"
+                  onClick={handleOpenNewForm}
+                  className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20 active:scale-95 transition cursor-pointer select-none shrink-0"
+                  aria-label="Novo Lançamento de Ganho"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <span className="hidden xs:inline">+ Novo Lançamento</span>
+                  <span className="xs:hidden">+ Novo</span>
+                </button>
 
-            {/* Campo: Valor Pago por Peça */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Valor Pago por Peça 
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <DollarSign className="w-4 h-4" />
-                </div>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={valorUnitarioPeca}
-                  onChange={(e) => setValorUnitarioPeca(e.target.value)}
-                  placeholder="Ex: 3.50"
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Campo: Bônus Extra */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Bônus Extra / Adicional 
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Gift className="w-4 h-4" />
-                </div>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  value={valorExtraBonus}
-                  onChange={(e) => setValorExtraBonus(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Campo: KM Rodado no dia */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                KM Rodado no Dia 
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Gauge className="w-4 h-4" />
-                </div>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  required
-                  min="0"
-                  step="0.1"
-                  value={kmRodado}
-                  onChange={(e) => setKmRodado(e.target.value)}
-                  placeholder="Ex: 85.5"
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Campo: Observações */}
-            <div className="sm:col-span-2 lg:col-span-1">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Observações (Opcional)
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <input
-                  type="text"
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Ex: Rota centro / chuva"
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Botão de Envio */}
-          <div className="pt-2">
-            <motion.button
-              type="submit"
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.96 }}
-              disabled={submitting}
-              className="w-full h-12 min-h-[48px] px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {submitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                  Salvando Lançamento...
-                </>
-              ) : (
-                <>
-                  <PlusCircle className="w-5 h-5 stroke-[2.2]" />
-                  Salvar Lançamento do Dia
-                </>
-              )}
-            </motion.button>
-          </div>
-        </form>
-      </section>
-
-      {/* LISTAGEM: ÚLTIMOS LANÇAMENTOS DO MOTORISTA (RECOLHÍVEL) */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between px-1 gap-2">
-          <button
-            type="button"
-            onClick={toggleHistoryCollapsed}
-            className="flex items-center gap-2.5 text-left group cursor-pointer py-1 -my-1 rounded-xl focus:outline-none"
-            aria-expanded={!isHistoryCollapsed}
-            aria-label={isHistoryCollapsed ? 'Expandir últimos lançamentos' : 'Recolher últimos lançamentos'}
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight group-hover:text-emerald-400 transition-colors">
-                  Últimos Lançamentos
-                </h3>
-                {earningsList.length > 0 && (
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
-                    {earningsList.length}
-                  </span>
+                {filteredEarningsList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={toggleAllExpanded}
+                    title={isAllExpanded ? 'Recolher todos os lançamentos' : 'Expandir todos os lançamentos'}
+                    aria-label={isAllExpanded ? 'Recolher todos os lançamentos' : 'Expandir todos os lançamentos'}
+                    className="flex items-center gap-1.5 px-2.5 py-2 min-h-[44px] rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/70 active:scale-[0.97] transition cursor-pointer select-none"
+                  >
+                    <span className="text-[11px] font-medium hidden sm:inline">
+                      {isAllExpanded ? 'Recolher todos' : 'Expandir todos'}
+                    </span>
+                    <span className="text-[11px] font-medium sm:hidden">
+                      {isAllExpanded ? 'Recolher' : 'Expandir'}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                        isAllExpanded ? 'rotate-180 text-emerald-400' : ''
+                      }`}
+                    />
+                  </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={refreshEarnings}
+                  disabled={loadingList}
+                  title="Atualizar lista"
+                  aria-label="Atualizar lista de lançamentos"
+                  className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition cursor-pointer"
+                >
+                  <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
+                </button>
               </div>
-              <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors">
-                {isHistoryCollapsed
-                  ? 'Lançamentos recolhidos • Toque para visualizar'
-                  : 'Histórico diário de produção e ganhos'}
-              </p>
             </div>
-          </button>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            {!isHistoryCollapsed && (
-              <button
-                type="button"
-                onClick={refreshEarnings}
-                disabled={loadingList}
-                title="Atualizar lista"
-                aria-label="Atualizar lista de lançamentos"
-                className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition cursor-pointer"
-              >
-                <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={toggleHistoryCollapsed}
-              title={isHistoryCollapsed ? 'Expandir lançamentos' : 'Ocultar lançamentos'}
-              aria-label={isHistoryCollapsed ? 'Mostrar últimos lançamentos' : 'Ocultar últimos lançamentos'}
-              className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/70 active:scale-[0.97] transition cursor-pointer select-none"
-            >
-              {isHistoryCollapsed ? (
-                <>
-                  <Eye className="w-4 h-4 text-emerald-400" />
-                  <span className="hidden sm:inline">Mostrar</span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                </>
-              ) : (
-                <>
-                  <EyeOff className="w-4 h-4 text-slate-400" />
-                  <span className="hidden sm:inline">Ocultar</span>
-                  <ChevronUp className="w-4 h-4 text-slate-400" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Card quando recolhido */}
-        {isHistoryCollapsed && (
-          <button
-            type="button"
-            onClick={toggleHistoryCollapsed}
-            className="w-full py-3.5 px-4 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl text-xs text-slate-400 hover:text-slate-200 transition cursor-pointer flex items-center justify-between group active:scale-[0.99]"
-          >
-            <span className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-emerald-400" />
-              <span>
-                {earningsList.length > 0
-                  ? `${earningsList.length} lançamento${earningsList.length > 1 ? 's' : ''} oculto${earningsList.length > 1 ? 's' : ''}`
-                  : 'Nenhum lançamento exibido'}
-              </span>
-            </span>
-            <span className="text-emerald-400 font-semibold group-hover:underline flex items-center gap-1">
-              Toque para exibir
-              <ChevronDown className="w-3.5 h-3.5" />
-            </span>
-          </button>
-        )}
-
-        {/* Conteúdo exibido apenas quando NÃO recolhido */}
-        {!isHistoryCollapsed && (
-          <>
-            {/* BARRA DE FILTRAGEM AVANÇADA (MÊS, QUINZENA, BUSCA E ORDENAÇÃO) */}
-            <HistoryFilterBar
-              filterState={filterState}
-              onFilterChange={setFilterState}
-              profile={profile}
-              searchPlaceholder="Buscar por observação, data (ex: 30/10), peças, bônus..."
-              totalFilteredCount={filteredEarningsList.length}
-            />
-
-            {/* RESUMO DO FILTRO ATIVO (TOTALIZADOR DINÂMICO) */}
-            <EarningsFilterSummary
-              items={filteredEarningsList}
-              filterState={filterState}
-              profile={profile}
-              vehicle={vehicle}
-              paymentRecords={paymentRecords}
-              onPaymentRecordUpdated={handlePaymentRecordUpdated}
-              onPaymentRecordReverted={handlePaymentRecordReverted}
-            />
 
             {/* Loading Skeleton */}
             {loadingList && earningsList.length === 0 && (
@@ -944,8 +966,16 @@ export const DailyEarningsPage: React.FC = () => {
                 </div>
                 <h4 className="text-sm font-bold text-white">Nenhum lançamento encontrado</h4>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  Use o formulário acima para registrar sua primeira rota. Os valores calculados aparecerão aqui em ordem cronológica.
+                  Toque em &quot;+ Novo Lançamento&quot; ou no botão flutuante para registrar sua primeira rota.
                 </p>
+                <button
+                  type="button"
+                  onClick={handleOpenNewForm}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  Novo Lançamento Diário
+                </button>
               </div>
             )}
 
@@ -972,13 +1002,13 @@ export const DailyEarningsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Lista de Registros com Stagger e Animação de Layout */}
+            {/* Lista de Registros com Stagger e Animação de Layout (Cards Compactos Expansíveis) */}
             <motion.div
               key={`${filterState.monthYear}-${filterState.periodChip}`}
               variants={staggerContainerVariants}
               initial="hidden"
               animate="visible"
-              className="space-y-3"
+              className="space-y-2.5"
             >
               <AnimatePresence>
                 {filteredEarningsList.map((item) => {
@@ -990,116 +1020,219 @@ export const DailyEarningsPage: React.FC = () => {
                   const rendimentoKm = item.km_rodado > 0 ? faturamento / item.km_rodado : 0;
                   const isConfirming = confirmDeleteId === item.id;
                   const isDeleting = deletingId === item.id;
-                  const { fullBadge } = formatCardDateBadge(item.data, profile);
+                  const { fullBadge, formattedDate, weekday, paymentCycleBadge } = formatCardDateBadge(item.data, profile);
+
+                  const dateParts = formattedDate ? formattedDate.split(' ') : [];
+                  const dayAndMonth = dateParts.length >= 2 ? `${dateParts[0]} ${dateParts[1]}` : item.data;
+                  const compactDate = weekday ? `${dayAndMonth} • ${weekday}` : dayAndMonth;
+                  const isExpanded = isAllExpanded || expandedId === item.id;
 
                   return (
                     <motion.div
                       key={item.id}
                       layout
                       variants={staggerItemVariants}
-                      className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition-colors shadow-sm"
+                      className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl overflow-hidden shadow-sm transition-colors"
                     >
-                    <div className="flex items-start justify-between gap-3">
-                      {/* Informações da Data e Faturamento */}
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
-                            {fullBadge}
+                      {/* Linha Compacta (1 Linha - Estado Fechado por Padrão) */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => toggleItemExpand(item.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleItemExpand(item.id);
+                          }
+                        }}
+                        aria-expanded={isExpanded}
+                        className="w-full flex items-center justify-between py-3 px-4 text-left cursor-pointer hover:bg-slate-800/40 active:bg-slate-800/60 transition select-none gap-2 min-h-[48px]"
+                      >
+                        {/* Esquerda: Data Compacta + Qtd Peças + Mini-ícones */}
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono tracking-tight shrink-0 border border-slate-700/50">
+                            {compactDate}
+                          </span>
+                          <span className="text-xs font-bold text-white font-mono flex items-center gap-1 shrink-0">
+                            <Package className="w-3.5 h-3.5 text-slate-400" />
+                            {item.qtd_pecas}{' '}
+                            <span className="text-[11px] font-normal text-slate-400">pçs</span>
                           </span>
                           {item.valor_extra_bonus > 0 && (
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                              + Bônus {formatCurrency(item.valor_extra_bonus)}
+                            <span
+                              title={`+ Bônus ${formatCurrency(item.valor_extra_bonus)}`}
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0"
+                            >
+                              <Gift className="w-3 h-3 text-amber-400" />
+                              <span className="hidden xs:inline">+{formatCurrency(item.valor_extra_bonus)}</span>
+                            </span>
+                          )}
+                          {item.observacoes && (
+                            <span
+                              title={`Observação: "${item.observacoes}"`}
+                              className="inline-flex items-center text-slate-400 shrink-0"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-slate-500" />
                             </span>
                           )}
                         </div>
 
-                        <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1.5 font-mono">
-                          {formatCurrency(faturamento)}
+                        {/* Direita: Valor Total Bruto + ChevronDown que gira 180deg */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-sm sm:text-base font-black text-emerald-400 font-mono">
+                            {formatCurrency(faturamento)}
+                          </span>
+                          <ChevronDown
+                            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                              isExpanded ? 'rotate-180 text-emerald-400' : ''
+                            }`}
+                          />
                         </div>
                       </div>
 
-                      {/* Ações: Editar e Excluir */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {!isConfirming && (
-                          <button
-                            type="button"
-                            onClick={() => setEditingEarning(item)}
-                            aria-label="Editar lançamento"
-                            title="Editar este lançamento"
-                            className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
+                      {/* Expansão Suave ao Tocar */}
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeInOut' }}
+                            className="overflow-hidden border-t border-slate-800/60 px-4 pt-3 pb-4 space-y-3"
                           >
-                            <Pencil className="w-4 h-4" />
-                            <span className="hidden sm:inline">Editar</span>
-                          </button>
-                        )}
+                            {/* Grid Completo de Detalhes */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                                  Valor Unitário
+                                </span>
+                                <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                                  {formatCurrency(item.valor_unitario_peca)} / un.
+                                </span>
+                              </div>
 
-                        {isConfirming ? (
-                          <div className="flex items-center gap-1.5 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
-                            <span className="text-[11px] font-semibold text-rose-300 px-1">
-                              Excluir?
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(item.id)}
-                              disabled={isDeleting}
-                              className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                                  Bônus Extra
+                                </span>
+                                <span
+                                  className={`font-mono font-bold text-xs sm:text-sm mt-0.5 block ${
+                                    item.valor_extra_bonus > 0 ? 'text-amber-400' : 'text-slate-400'
+                                  }`}
+                                >
+                                  {item.valor_extra_bonus > 0 ? formatCurrency(item.valor_extra_bonus) : 'R$ 0,00'}
+                                </span>
+                              </div>
+
+                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                                  KM Rodado
+                                </span>
+                                <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                                  {item.km_rodado > 0 ? `${item.km_rodado.toLocaleString('pt-BR')} km` : '0 km'}
+                                </span>
+                              </div>
+
+                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                                  Ganho Bruto / KM
+                                </span>
+                                <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm mt-0.5 block">
+                                  {rendimentoKm > 0 ? `${formatCurrency(rendimentoKm)}/km` : '---'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Referência da Quinzena / Ciclo */}
+                            <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/40 px-3 py-2 rounded-xl border border-slate-800/40 flex-wrap gap-2">
+                              <span className="flex items-center gap-1.5 font-medium">
+                                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>{fullBadge}</span>
+                              </span>
+                              <span className="text-[11px] font-mono text-slate-400">
+                                Ref: {paymentCycleBadge}
+                              </span>
+                            </div>
+
+                            {/* Observação Completa */}
+                            {item.observacoes && (
+                              <div className="text-xs text-slate-300 italic bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 flex items-start gap-2">
+                                <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                                <span>&quot;{item.observacoes}&quot;</span>
+                              </div>
+                            )}
+
+                            {/* Barra de Ações Rápidas no Rodapé */}
+                            <div
+                              className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/60"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              {isDeleting ? '...' : 'Sim'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
-                            >
-                              Não
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(item.id)}
-                            aria-label="Excluir lançamento"
-                            title="Excluir este lançamento"
-                            className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                              {!isConfirming ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingEarning(item);
+                                    }}
+                                    className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-emerald-400 border border-slate-700/60 active:scale-[0.96] transition cursor-pointer"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                    <span>Editar Lançamento</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setConfirmDeleteId(item.id);
+                                    }}
+                                    className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 active:scale-[0.96] transition cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Excluir</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="flex items-center gap-2 bg-rose-950/90 border border-rose-600/50 p-1.5 rounded-xl">
+                                  <span className="text-xs font-semibold text-rose-300 px-1">
+                                    Confirmar exclusão?
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDelete(item.id);
+                                    }}
+                                    disabled={isDeleting}
+                                    className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                                  >
+                                    {isDeleting ? '...' : 'Sim, Excluir'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setConfirmDeleteId(null);
+                                    }}
+                                    className="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
                         )}
-                      </div>
-                    </div>
-
-                    {/* Detalhes operacionais em Badges */}
-                    <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                      <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                        <strong className="text-white">{item.qtd_pecas}</strong> peças
-                      </span>
-                      <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                        {formatCurrency(item.valor_unitario_peca)} / un.
-                      </span>
-                      <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                        <strong className="text-white">{item.km_rodado}</strong> km
-                      </span>
-                      {rendimentoKm > 0 && (
-                        <span className="bg-emerald-500/10 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-mono font-semibold">
-                          {formatCurrency(rendimentoKm)}/km
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Observações, se houver */}
-                    {item.observacoes && (
-                      <div className="mt-2 text-xs text-slate-400 italic bg-slate-950/40 p-2 rounded-lg border border-slate-800/40">
-                        &quot;{item.observacoes}&quot;
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </motion.div>
-          </>
-        )}
-      </section>
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
+          </section>
+        </div>
+      </div>
 
       {/* SEÇÃO HISTÓRICA: MEUS FECHAMENTOS (HOLERITES) */}
       <PaymentCyclesHistory
@@ -1121,6 +1254,27 @@ export const DailyEarningsPage: React.FC = () => {
           onSuccess={handleEditSuccess}
         />
       )}
+
+      {/* Botão de Ação Flutuante (FAB) Mobile */}
+      <FloatingActionButton
+        label="+ Lançar Dia"
+        onClick={handleOpenNewForm}
+      />
+
+      {/* Gaveta Inferior Deslizante (Bottom Sheet) no Mobile */}
+      <BottomSheetModal
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        title="Novo Lançamento Diário"
+        subtitle="Registre os dados da sua rota de hoje"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-bold shadow-md shadow-emerald-500/20">
+            <PlusCircle className="w-5 h-5 stroke-[2.5]" />
+          </div>
+        }
+      >
+        {renderEarningsForm(true)}
+      </BottomSheetModal>
     </div>
   );
 };

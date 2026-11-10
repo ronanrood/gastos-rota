@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Profile, UserRole, UserStatus } from '../../types/database';
 import { createClient } from '@supabase/supabase-js';
+import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   ShieldCheck,
   Users,
@@ -395,10 +396,13 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* CARDS DE VISÃO GERAL */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+      {/* CARDS DE VISÃO GERAL (Carrossel Horizontal no Mobile) */}
+      <SwipeableCarousel
+        totalItems={3}
+        gridClassName="md:grid-cols-3 md:gap-4"
+      >
         {/* Card 1: Total de Motoristas */}
-        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
+        <div className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Total de Cadastros
@@ -416,7 +420,7 @@ export const AdminPage: React.FC = () => {
         </div>
 
         {/* Card 2: Motoristas Ativos */}
-        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
+        <div className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Motoristas Ativos
@@ -436,7 +440,7 @@ export const AdminPage: React.FC = () => {
         </div>
 
         {/* Card 3: Faturamento Total da Frota */}
-        <div className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
+        <div className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Faturamento Global
@@ -452,7 +456,7 @@ export const AdminPage: React.FC = () => {
             Movimentado em toda a plataforma
           </span>
         </div>
-      </div>
+      </SwipeableCarousel>
 
       {/* TABELA DE MOTORISTAS / USUÁRIOS */}
       <section className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl backdrop-blur-md">

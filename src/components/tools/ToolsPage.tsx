@@ -695,13 +695,13 @@ export const ToolsPage: React.FC = () => {
         </div>
       )}
 
-      {/* SELETOR DE ABAS DAS 5 FERRAMENTAS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-1.5 bg-slate-950/80 border border-slate-800 rounded-2xl">
+      {/* SELETOR DE ABAS DAS 5 FERRAMENTAS (Pílulas Horizontais Deslizantes no Mobile) */}
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 p-1.5 bg-slate-950/80 border border-slate-800 rounded-2xl scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 sm:mx-0 sm:px-1.5 sm:grid sm:grid-cols-3 lg:grid-cols-5">
         <motion.button
           whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('combustivel')}
-          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 snap-start min-w-[130px] sm:min-w-0 sm:w-auto ${
             activeTab === 'combustivel'
               ? 'text-white shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
@@ -724,7 +724,7 @@ export const ToolsPage: React.FC = () => {
           whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('viabilidade')}
-          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 snap-start min-w-[130px] sm:min-w-0 sm:w-auto ${
             activeTab === 'viabilidade'
               ? 'text-white shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
@@ -747,7 +747,7 @@ export const ToolsPage: React.FC = () => {
           whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('metas')}
-          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 snap-start min-w-[130px] sm:min-w-0 sm:w-auto ${
             activeTab === 'metas'
               ? 'text-slate-950 font-black shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
@@ -770,7 +770,7 @@ export const ToolsPage: React.FC = () => {
           whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('custo_km')}
-          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 snap-start min-w-[130px] sm:min-w-0 sm:w-auto ${
             activeTab === 'custo_km'
               ? 'text-white shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
@@ -793,7 +793,7 @@ export const ToolsPage: React.FC = () => {
           whileTap={{ scale: 0.96 }}
           type="button"
           onClick={() => setActiveTab('saude')}
-          className={`relative flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition cursor-pointer col-span-2 sm:col-span-1 lg:col-span-1 ${
+          className={`relative flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 snap-start min-w-[130px] sm:min-w-0 sm:w-auto ${
             activeTab === 'saude'
               ? 'text-white shadow-lg'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'

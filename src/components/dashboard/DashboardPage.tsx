@@ -4,7 +4,8 @@ import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { DailyEarning, FuelLog, MaintenanceLog, Vehicle, PaymentCycleRecord } from '../../types/database';
 import { AnimatedCounter } from '../common/AnimatedCounter';
-import { staggerContainerVariants, staggerItemVariants } from '../common/MotionVariants';
+import { staggerItemVariants } from '../common/MotionVariants';
+import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   ResponsiveContainer,
   BarChart,
@@ -497,19 +498,16 @@ export const DashboardPage: React.FC = () => {
         />
       </div>
 
-      {/* 4 CARDS PRINCIPAIS COM ENTRADA EM CASCATA */}
-      <motion.div
-        key={`${filterState.monthYear}-${filterState.periodChip}`}
-        variants={staggerContainerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4"
+      {/* 4 CARDS PRINCIPAIS COM ENTRADA EM CASCATA E CARROSSEL MOBILE */}
+      <SwipeableCarousel
+        totalItems={4}
+        gridClassName="md:grid-cols-2 lg:grid-cols-4 md:gap-4"
       >
         {/* Card A: Faturamento Bruto */}
         <motion.div
           variants={staggerItemVariants}
           whileHover={{ y: -2 }}
-          className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+          className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -531,7 +529,7 @@ export const DashboardPage: React.FC = () => {
         <motion.div
           variants={staggerItemVariants}
           whileHover={{ y: -2 }}
-          className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+          className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -573,7 +571,7 @@ export const DashboardPage: React.FC = () => {
         <motion.div
           variants={staggerItemVariants}
           whileHover={{ y: -2 }}
-          className={`border rounded-3xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md ${
+          className={`min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto border rounded-3xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md ${
             lucroLiquidoReal >= 0
               ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/40 ring-1 ring-emerald-500/20'
               : 'bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/40 border-rose-500/40 ring-1 ring-rose-500/20'
@@ -620,7 +618,7 @@ export const DashboardPage: React.FC = () => {
         <motion.div
           variants={staggerItemVariants}
           whileHover={{ y: -2 }}
-          className="bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+          className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -643,7 +641,7 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
         </motion.div>
-      </motion.div>
+      </SwipeableCarousel>
 
       {/* CARD DE PROGRESSO DA META FINANCEIRA */}
       <motion.div

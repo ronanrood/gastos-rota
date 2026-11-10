@@ -33,6 +33,7 @@ import {
 import { triggerSuccessCelebration } from '../../lib/celebrate';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { modalBackdropVariants, modalContentVariants } from '../common/MotionVariants';
+import { SwipeableCarousel } from '../common/SwipeableCarousel';
 
 interface VehicleHealthPanelProps {
   vehicle: Vehicle | null;
@@ -399,8 +400,11 @@ export const VehicleHealthPanel: React.FC<VehicleHealthPanelProps> = ({
         </div>
       </div>
 
-      {/* GRID DOS 4 COMPONENTES DE MANUTENÇÃO PREVENTIVA */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* CARROSSEL / GRID DOS 4 COMPONENTES DE MANUTENÇÃO PREVENTIVA */}
+      <SwipeableCarousel
+        totalItems={healthList.length}
+        gridClassName="md:grid-cols-2 md:gap-4"
+      >
         {healthList.map((item) => {
           const Icon = ITEM_ICONS[item.key] || Wrench;
           const isVencido = item.status === 'vencido';
@@ -410,7 +414,7 @@ export const VehicleHealthPanel: React.FC<VehicleHealthPanelProps> = ({
             <motion.div
               key={item.key}
               layout
-              className={`rounded-3xl p-5 border transition-all duration-300 flex flex-col justify-between space-y-4 shadow-lg ${
+              className={`min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto rounded-3xl p-5 border transition-all duration-300 flex flex-col justify-between space-y-4 shadow-lg ${
                 isVencido
                   ? 'bg-gradient-to-br from-slate-900 via-rose-950/30 to-slate-950 border-rose-500/50 ring-1 ring-rose-500/30'
                   : isAtencao
@@ -547,7 +551,7 @@ export const VehicleHealthPanel: React.FC<VehicleHealthPanelProps> = ({
             </motion.div>
           );
         })}
-      </div>
+      </SwipeableCarousel>
 
       {/* ========================================================================= */}
       {/* MODAL 1: AJUSTAR ODÔMETRO MANUAL DO PAINEL                                */}

@@ -10,6 +10,7 @@ import {
   DollarSign,
   Gauge,
   PlusCircle,
+  Plus,
   Trash2,
   AlertCircle,
   CheckCircle2,
@@ -20,10 +21,14 @@ import {
   Info,
   Pencil,
   RotateCcw,
+  ChevronDown,
 } from 'lucide-react';
 import { EditFuelModal } from './EditFuelModal';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
 import { FuelFilterSummary } from '../filters/FuelFilterSummary';
+import { BottomSheetModal } from '../common/BottomSheetModal';
+import { FloatingActionButton } from '../common/FloatingActionButton';
+import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   type HistoryFilterState,
   getDefaultFilterState,
@@ -66,6 +71,34 @@ export const FuelPage: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingFuelLog, setEditingFuelLog] = useState<FuelLog | null>(null);
+
+  // Controle de abertura da gaveta inferior (Bottom Sheet) no mobile
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const handleOpenNewForm = useCallback(() => {
+    setFormError(null);
+    setFormSuccess(null);
+    setIsFormOpen(true);
+    // No desktop, rola suavemente para o formulário na lateral se estiver visível
+    const el = document.getElementById('fuel-form-section');
+    if (el && window.innerWidth >= 1024) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
+  // Estados para expansão inteligente tipo Accordion nos cards de histórico
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isAllExpanded, setIsAllExpanded] = useState<boolean>(false);
+
+  const toggleItemExpand = useCallback((id: string) => {
+    setIsAllExpanded(false);
+    setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const toggleAllExpanded = useCallback(() => {
+    setIsAllExpanded((prev) => !prev);
+    setExpandedId(null);
+  }, []);
 
   const handleEditSuccess = (updated: FuelLog) => {
     setFuelLogs((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
@@ -251,6 +284,7 @@ export const FuelPage: React.FC = () => {
       }
 
       setFormSuccess('Abastecimento registrado com sucesso!');
+      setIsFormOpen(false);
 
       if (inserted) {
         setFuelLogs((prev) => [inserted as FuelLog, ...prev]);
@@ -375,12 +409,262 @@ export const FuelPage: React.FC = () => {
 
   const getUnidade = (tipo: FuelType) => (tipo === 'gnv' ? 'm³' : 'L');
 
+  // Renderiza o formulário de abastecimento (compartilhado entre desktop e Bottom Sheet mobile)
+  const renderFuelForm = (isModal: boolean = false) => (
+    <div
+      className={`space-y-4 ${
+        isModal
+          ? ''
+          : 'bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-5 sm:p-7 relative overflow-hidden backdrop-blur-md'
+      }`}
+    >
+      {!isModal && (
+        <>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 text-slate-950 flex items-center justify-center font-bold shadow-md shadow-amber-500/20">
+                <Fuel className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+                  Lançar Abastecimento
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Registre os dados da bomba para cálculo de autonomia
+                </p>
+              </div>
+            </div>
+
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Tempo real
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* FEEDBACKS */}
+      {formError && (
+        <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs sm:text-sm flex items-start gap-2.5">
+          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">Erro</p>
+            <p className="text-rose-300/90">{formError}</p>
+          </div>
+        </div>
+      )}
+
+      {formSuccess && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-start gap-2.5">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="flex-1 font-semibold">{formSuccess}</div>
+        </div>
+      )}
+
+      {/* VISOR EM TEMPO REAL: LITROS CALCULADOS E AUTONOMIA ESTIMADA */}
+      <div className="rounded-2xl bg-gradient-to-br from-slate-950 to-slate-900 border-2 border-amber-500/40 p-4 sm:p-5 relative shadow-inner">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+          {/* a) Volume calculado */}
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-400">
+              <Fuel className="w-4 h-4" />
+              Volume Calculado (Litros / m³)
+            </div>
+            <div className="text-3xl sm:text-4xl font-black text-white mt-1 tracking-tight font-mono">
+              {litrosCalculadosEstimados > 0
+                ? `${litrosCalculadosEstimados.toFixed(2)} ${getUnidade(tipoCombustivel)}`
+                : `0,00 ${getUnidade(tipoCombustivel)}`}
+            </div>
+            <span className="text-[11px] text-slate-400 block mt-1">
+              {numValorTotal > 0 && numPrecoLitro > 0
+                ? `${formatCurrency(numValorTotal)} ÷ ${formatCurrency(numPrecoLitro)}`
+                : 'Preencha o total e o preço por litro'}
+            </span>
+          </div>
+
+          {/* b) Autonomia estimada em KM */}
+          <div className="pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-800 sm:pl-4">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-teal-400">
+              <Zap className="w-4 h-4" />
+              Autonomia Estimada
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-teal-300 mt-1 tracking-tight font-mono">
+              {autonomiaEstimadaKm > 0
+                ? `~ ${autonomiaEstimadaKm.toFixed(0)} km`
+                : '-- km'}
+            </div>
+
+            <div className="text-[11px] text-slate-400 mt-1">
+              {mediaVeiculoAtual && mediaVeiculoAtual > 0 ? (
+                <span className="inline-flex items-center gap-1 text-slate-300">
+                  <Car className="w-3 h-3 text-teal-400" />
+                  Média de {mediaVeiculoAtual} {getUnidade(tipoCombustivel) === 'm³' ? 'km/m³' : 'km/l'}
+                </span>
+              ) : (
+                <span className="text-amber-400/90 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Cadastre a média do veículo em &quot;Meu Veículo&quot;
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FORMULÁRIO */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Seletor Tipo de Combustível */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-300 mb-2">
+            Tipo de Combustível
+          </label>
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { id: 'gasolina' as FuelType, label: 'Gasolina', icon: '⛽' },
+              { id: 'etanol' as FuelType, label: 'Etanol', icon: '🌱' },
+              { id: 'gnv' as FuelType, label: 'GNV', icon: '💨' },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setTipoCombustivel(opt.id)}
+                className={`min-h-[48px] py-2.5 px-3 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
+                  tipoCombustivel === opt.id
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 ring-2 ring-amber-400'
+                    : 'bg-slate-950/80 text-slate-400 hover:text-white border border-slate-700/80'
+                }`}
+              >
+                <span>{opt.icon}</span>
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Data */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Data do Abastecimento
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <input
+                type="date"
+                required
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+              />
+            </div>
+          </div>
+
+          {/* Odômetro KM */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              KM Atual no Odômetro 
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Gauge className="w-4 h-4" />
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                required
+                min="0"
+                step="0.1"
+                value={kmOdometro}
+                onChange={(e) => setKmOdometro(e.target.value)}
+                placeholder="Ex: 85400"
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Valor Total Abastecido */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Valor Total Pago 
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <DollarSign className="w-4 h-4" />
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                required
+                min="0"
+                step="0.01"
+                value={valorTotalAbastecido}
+                onChange={(e) => setValorTotalAbastecido(e.target.value)}
+                placeholder="Ex: 150.00"
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Preço por Litro ou m³ */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Preço por {getUnidade(tipoCombustivel)} 
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <DollarSign className="w-4 h-4" />
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                required
+                min="0"
+                step="0.001"
+                value={precoPorLitro}
+                onChange={(e) => setPrecoPorLitro(e.target.value)}
+                placeholder="Ex: 5.89"
+                className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Botão de Salvar */}
+        <div className="pt-2">
+          <motion.button
+            type="submit"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.96 }}
+            disabled={submitting}
+            className="w-full h-12 min-h-[48px] px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-amber-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {submitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                Salvando Abastecimento...
+              </>
+            ) : (
+              <>
+                <PlusCircle className="w-5 h-5 stroke-[2.2]" />
+                Salvar Abastecimento
+              </>
+            )}
+          </motion.button>
+        </div>
+      </form>
+    </div>
+  );
+
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Cards de Métricas Resumo */}
       {fuelLogs.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
+        <SwipeableCarousel totalItems={3} gridClassName="md:grid-cols-3">
+          <div className="min-w-[85vw] sm:min-w-[280px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
               Total em Combustível
             </span>
@@ -392,7 +676,7 @@ export const FuelPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
+          <div className="min-w-[85vw] sm:min-w-[280px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
               Volume Total
             </span>
@@ -404,7 +688,7 @@ export const FuelPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="col-span-2 sm:col-span-1 bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
+          <div className="min-w-[85vw] sm:min-w-[280px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
               Preço Médio Pago
             </span>
@@ -415,269 +699,100 @@ export const FuelPage: React.FC = () => {
               por litro/m³
             </span>
           </div>
-        </div>
+        </SwipeableCarousel>
       )}
 
-      {/* CARD PRINCIPAL: FORMULÁRIO DE ABASTECIMENTO */}
-      <section className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-5 sm:p-7 relative overflow-hidden backdrop-blur-md">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 text-slate-950 flex items-center justify-center font-bold shadow-md shadow-amber-500/20">
-              <Fuel className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-                Lançar Abastecimento
-              </h2>
-              <p className="text-xs text-slate-400">
-                Registre os dados da bomba para cálculo de autonomia
-              </p>
-            </div>
-          </div>
-
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Cálculo em tempo real
-          </span>
+      {/* LAYOUT PRINCIPAL: No desktop, exibe o formulário na coluna lateral aberta (lg:grid) e o histórico na direita */}
+      <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
+        {/* FORMULÁRIO LATERAL NO DESKTOP (Aberto e fixo na visão desktop) */}
+        <div id="fuel-form-section" className="hidden lg:block lg:col-span-5 sticky top-24">
+          {renderFuelForm(false)}
         </div>
 
-        {/* FEEDBACKS */}
-        {formError && (
-          <div className="mb-5 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs sm:text-sm flex items-start gap-2.5">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold">Erro</p>
-              <p className="text-rose-300/90">{formError}</p>
-            </div>
-          </div>
-        )}
+        {/* COLUNA DO HISTÓRICO (Largura total no mobile, coluna direita no desktop) */}
+        <div className="lg:col-span-7 space-y-4">
+          {/* BARRA DE FILTRAGEM AVANÇADA (MÊS, QUINZENA, BUSCA E ORDENAÇÃO) */}
+          <HistoryFilterBar
+            filterState={filterState}
+            onFilterChange={setFilterState}
+            profile={profile}
+            searchPlaceholder="Buscar por combustível, valor, preço por litro, km..."
+            totalFilteredCount={filteredLogs.length}
+          />
 
-        {formSuccess && (
-          <div className="mb-5 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-start gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="flex-1 font-semibold">{formSuccess}</div>
-          </div>
-        )}
+          {/* RESUMO DO FILTRO ATIVO (TOTALIZADOR DINÂMICO) */}
+          <FuelFilterSummary
+            items={filteredLogs}
+            filterState={filterState}
+            profile={profile}
+            vehicle={vehicle}
+          />
 
-        {/* VISOR EM TEMPO REAL: LITROS CALCULADOS E AUTONOMIA ESTIMADA */}
-        <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-950 to-slate-900 border-2 border-amber-500/40 p-4 sm:p-5 relative shadow-inner">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-            {/* a) Volume calculado */}
-            <div>
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-400">
-                <Fuel className="w-4 h-4" />
-                Volume Calculado (Litros / m³)
-              </div>
-              <div className="text-3xl sm:text-4xl font-black text-white mt-1 tracking-tight font-mono">
-                {litrosCalculadosEstimados > 0
-                  ? `${litrosCalculadosEstimados.toFixed(2)} ${getUnidade(tipoCombustivel)}`
-                  : `0,00 ${getUnidade(tipoCombustivel)}`}
-              </div>
-              <span className="text-[11px] text-slate-400 block mt-1">
-                {numValorTotal > 0 && numPrecoLitro > 0
-                  ? `${formatCurrency(numValorTotal)} ÷ ${formatCurrency(numPrecoLitro)}`
-                  : 'Preencha o total e o preço por litro'}
-              </span>
-            </div>
-
-            {/* b) Autonomia estimada em KM */}
-            <div className="pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-800 sm:pl-4">
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-teal-400">
-                <Zap className="w-4 h-4" />
-                Autonomia Estimada
-              </div>
-              <div className="text-2xl sm:text-3xl font-black text-teal-300 mt-1 tracking-tight font-mono">
-                {autonomiaEstimadaKm > 0
-                  ? `~ ${autonomiaEstimadaKm.toFixed(0)} km`
-                  : '-- km'}
+          {/* HISTÓRICO DE ABASTECIMENTOS */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between px-1 gap-2 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    Histórico de Abastecimentos
+                  </h3>
+                  {fuelLogs.length > 0 && (
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
+                      {fuelLogs.length}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400">
+                  Registros e consumo do veículo
+                </p>
               </div>
 
-              <div className="text-[11px] text-slate-400 mt-1">
-                {mediaVeiculoAtual && mediaVeiculoAtual > 0 ? (
-                  <span className="inline-flex items-center gap-1 text-slate-300">
-                    <Car className="w-3 h-3 text-teal-400" />
-                    Média de {mediaVeiculoAtual} {getUnidade(tipoCombustivel) === 'm³' ? 'km/m³' : 'km/l'}
-                  </span>
-                ) : (
-                  <span className="text-amber-400/90 flex items-center gap-1">
-                    <Info className="w-3 h-3" />
-                    Cadastre a média do veículo em &quot;Meu Veículo&quot;
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* FORMULÁRIO */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Seletor Tipo de Combustível */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2">
-              Tipo de Combustível
-            </label>
-            <div className="grid grid-cols-3 gap-2.5">
-              {[
-                { id: 'gasolina' as FuelType, label: 'Gasolina', icon: '⛽' },
-                { id: 'etanol' as FuelType, label: 'Etanol', icon: '🌱' },
-                { id: 'gnv' as FuelType, label: 'GNV', icon: '💨' },
-              ].map((opt) => (
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                {/* Botão de Ação Rápida no Cabeçalho da Lista */}
                 <button
-                  key={opt.id}
                   type="button"
-                  onClick={() => setTipoCombustivel(opt.id)}
-                  className={`min-h-[48px] py-2.5 px-3 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
-                    tipoCombustivel === opt.id
-                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 ring-2 ring-amber-400'
-                      : 'bg-slate-950/80 text-slate-400 hover:text-white border border-slate-700/80'
-                  }`}
+                  onClick={handleOpenNewForm}
+                  className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 active:scale-95 transition cursor-pointer select-none shrink-0"
+                  aria-label="Novo Abastecimento"
                 >
-                  <span>{opt.icon}</span>
-                  <span>{opt.label}</span>
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <span className="hidden xs:inline">+ Abastecer</span>
+                  <span className="xs:hidden">+ Novo</span>
                 </button>
-              ))}
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-            {/* Data */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Data do Abastecimento
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <input
-                  type="date"
-                  required
-                  value={data}
-                  onChange={(e) => setData(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
-                />
+                {filteredLogs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={toggleAllExpanded}
+                    title={isAllExpanded ? 'Recolher todos os abastecimentos' : 'Expandir todos os abastecimentos'}
+                    aria-label={isAllExpanded ? 'Recolher todos os abastecimentos' : 'Expandir todos os abastecimentos'}
+                    className="flex items-center gap-1.5 px-2.5 py-2 min-h-[44px] rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/70 active:scale-[0.97] transition cursor-pointer select-none"
+                  >
+                    <span className="text-[11px] font-medium hidden sm:inline">
+                      {isAllExpanded ? 'Recolher todos' : 'Expandir todos'}
+                    </span>
+                    <span className="text-[11px] font-medium sm:hidden">
+                      {isAllExpanded ? 'Recolher' : 'Expandir'}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                        isAllExpanded ? 'rotate-180 text-amber-400' : ''
+                      }`}
+                    />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={refreshVehicleAndLogs}
+                  disabled={loadingList}
+                  title="Atualizar lista"
+                  className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition cursor-pointer"
+                >
+                  <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
+                </button>
               </div>
             </div>
-
-            {/* Odômetro KM */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                KM Atual no Odômetro 
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Gauge className="w-4 h-4" />
-                </div>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  required
-                  min="0"
-                  step="0.1"
-                  value={kmOdometro}
-                  onChange={(e) => setKmOdometro(e.target.value)}
-                  placeholder="Ex: 85400"
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Valor Total Abastecido */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Valor Total Pago 
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <DollarSign className="w-4 h-4" />
-                </div>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={valorTotalAbastecido}
-                  onChange={(e) => setValorTotalAbastecido(e.target.value)}
-                  placeholder="Ex: 150.00"
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Preço por Litro ou m³ */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Preço por {getUnidade(tipoCombustivel)} 
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <DollarSign className="w-4 h-4" />
-                </div>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  required
-                  min="0"
-                  step="0.001"
-                  value={precoPorLitro}
-                  onChange={(e) => setPrecoPorLitro(e.target.value)}
-                  placeholder="Ex: 5.89"
-                  className="w-full pl-10 pr-3.5 py-3 sm:py-2.5 bg-slate-950/80 border border-slate-700 rounded-2xl text-white text-base sm:text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition font-mono"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Botão de Salvar */}
-          <div className="pt-2">
-            <motion.button
-              type="submit"
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.96 }}
-              disabled={submitting}
-              className="w-full h-12 min-h-[48px] px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-amber-500/25 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {submitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                  Salvando Abastecimento...
-                </>
-              ) : (
-                <>
-                  <PlusCircle className="w-5 h-5 stroke-[2.2]" />
-                  Salvar Abastecimento
-                </>
-              )}
-            </motion.button>
-          </div>
-        </form>
-      </section>
-
-      {/* HISTÓRICO DE ABASTECIMENTOS */}
-      <section className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-              Histórico de Abastecimentos
-            </h3>
-            <p className="text-xs text-slate-400">
-              Registros e consumo do veículo
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={refreshVehicleAndLogs}
-            disabled={loadingList}
-            title="Atualizar lista"
-            className="self-end sm:self-center p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-          >
-            <RotateCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
 
         {/* BARRA DE FILTRAGEM AVANÇADA (MÊS, QUINZENA, BUSCA E ORDENAÇÃO) */}
         <HistoryFilterBar
@@ -750,7 +865,7 @@ export const FuelPage: React.FC = () => {
           variants={staggerContainerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-3"
+          className="space-y-2.5"
         >
           <AnimatePresence>
             {filteredLogs.map((item) => {
@@ -761,107 +876,226 @@ export const FuelPage: React.FC = () => {
 
               const isConfirming = confirmDeleteId === item.id;
               const isDeleting = deletingId === item.id;
-              const { fullBadge } = formatCardDateBadge(item.data, profile);
+              const { fullBadge, formattedDate, paymentCycleBadge } = formatCardDateBadge(item.data, profile);
+
+              const dateParts = formattedDate ? formattedDate.split(' ') : [];
+              const dayAndMonth = dateParts.length >= 2 ? `${dateParts[0]} ${dateParts[1]}` : item.data;
+              const isExpanded = isAllExpanded || expandedId === item.id;
+
+              // Autonomia e custo estimado por km baseado na média do veículo
+              const media =
+                item.tipo_combustivel === 'gasolina'
+                  ? vehicle?.media_gasolina
+                  : item.tipo_combustivel === 'etanol'
+                  ? vehicle?.media_etanol
+                  : vehicle?.media_gnv;
+              const estKm = media && media > 0 ? (litros * media).toFixed(0) : null;
+              const custoKm =
+                estKm && Number(estKm) > 0 ? (item.valor_total_abastecido / Number(estKm)).toFixed(2) : null;
 
               return (
                 <motion.div
                   key={item.id}
                   layout
                   variants={staggerItemVariants}
-                  className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition-colors shadow-sm"
+                  className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl overflow-hidden shadow-sm transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">
-                          {fullBadge}
+                  {/* Linha Compacta (1 Linha - Estado Fechado por Padrão) */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleItemExpand(item.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleItemExpand(item.id);
+                      }
+                    }}
+                    aria-expanded={isExpanded}
+                    className="w-full flex items-center justify-between py-3 px-4 text-left cursor-pointer hover:bg-slate-800/40 active:bg-slate-800/60 transition select-none gap-2 min-h-[48px]"
+                  >
+                    {/* Esquerda: Data (10 Nov) + Badge do combustível + Litragem/Volume */}
+                    <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono tracking-tight shrink-0 border border-slate-700/50">
+                        {dayAndMonth}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0 ${
+                          item.tipo_combustivel === 'gasolina'
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            : item.tipo_combustivel === 'etanol'
+                            ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
+                            : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                        }`}
+                      >
+                        {item.tipo_combustivel}
+                      </span>
+                      <span className="text-xs font-bold text-white font-mono shrink-0">
+                        {litros.toFixed(2)}{' '}
+                        <span className="text-[11px] font-normal text-slate-400">
+                          {getUnidade(item.tipo_combustivel)}
                         </span>
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                            item.tipo_combustivel === 'gasolina'
-                              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                              : item.tipo_combustivel === 'etanol'
-                              ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
-                              : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-                          }`}
-                        >
-                          {item.tipo_combustivel}
-                        </span>
-                      </div>
+                      </span>
+                    </div>
 
-                      <div className="text-xl sm:text-2xl font-black text-amber-400 mt-1.5 font-mono">
+                    {/* Direita: Valor abastecido + ChevronDown */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm sm:text-base font-black text-amber-400 font-mono">
                         {formatCurrency(item.valor_total_abastecido)}
-                      </div>
+                      </span>
+                      <ChevronDown
+                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180 text-amber-400' : ''
+                        }`}
+                      />
                     </div>
+                  </div>
 
-                    {/* Ações: Editar e Excluir */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {!isConfirming && (
-                        <button
-                          type="button"
-                          onClick={() => setEditingFuelLog(item)}
-                          aria-label="Editar abastecimento"
-                          title="Editar este abastecimento"
-                          className="h-10 min-h-[40px] px-2.5 sm:px-3 flex items-center justify-center gap-1.5 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 active:bg-amber-500/20 active:scale-[0.95] transition cursor-pointer text-xs font-semibold"
-                        >
-                          <Pencil className="w-4 h-4" />
-                          <span className="hidden sm:inline">Editar</span>
-                        </button>
-                      )}
+                  {/* Expansão Suave ao Tocar */}
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                        className="overflow-hidden border-t border-slate-800/60 px-4 pt-3 pb-4 space-y-3"
+                      >
+                        {/* Grid Completo de Detalhes */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                              Preço / {getUnidade(item.tipo_combustivel)}
+                            </span>
+                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                              {formatCurrency(item.preco_por_litro_ou_m3)}
+                            </span>
+                          </div>
 
-                      {isConfirming ? (
-                        <div className="flex items-center gap-1.5 bg-rose-950/80 border border-rose-600/50 p-1.5 rounded-xl">
-                          <span className="text-[11px] font-semibold text-rose-300 px-1">
-                            Excluir?
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item.id)}
-                            disabled={isDeleting}
-                            className="min-h-[40px] px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
-                          >
-                            {isDeleting ? '...' : 'Sim'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
-                          >
-                            Não
-                          </button>
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                              Volume Abastecido
+                            </span>
+                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                              {litros.toFixed(2)} {getUnidade(item.tipo_combustivel)}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                              Odômetro KM
+                            </span>
+                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                              {item.km_odometro.toLocaleString('pt-BR')} km
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                              Autonomia Estimada
+                            </span>
+                            <span className="font-mono font-bold text-amber-400 text-xs sm:text-sm mt-0.5 block">
+                              {estKm ? `~${estKm} km` : '---'}
+                            </span>
+                          </div>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(item.id)}
-                          aria-label="Excluir abastecimento"
-                          title="Excluir este abastecimento"
-                          className="w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 active:scale-[0.95] transition cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Detalhes operacionais em Badges */}
-                  <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                    <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                      <strong className="text-white">{litros.toFixed(2)}</strong> {getUnidade(item.tipo_combustivel)}
-                    </span>
-                    <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                      {formatCurrency(item.preco_por_litro_ou_m3)} / {getUnidade(item.tipo_combustivel)}
-                    </span>
-                    <span className="bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 font-mono">
-                      Odômetro: <strong className="text-white">{item.km_odometro.toLocaleString('pt-BR')}</strong> km
-                    </span>
-                  </div>
+                        {/* Custo Estimado por KM se houver cálculo */}
+                        {estKm && custoKm && (
+                          <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/40 px-3 py-2 rounded-xl border border-slate-800/40 flex-wrap gap-2">
+                            <span className="flex items-center gap-1.5 font-medium">
+                              <Zap className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Custo Estimado por KM:</span>
+                              <strong className="text-white font-mono">R$ {custoKm}/km</strong>
+                            </span>
+                            <span className="text-[11px] font-mono text-slate-400">
+                              (Média do carro: {media} km/{getUnidade(item.tipo_combustivel)})
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Referência da Quinzena / Ciclo */}
+                        <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/40 px-3 py-2 rounded-xl border border-slate-800/40 flex-wrap gap-2">
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                            <span>{fullBadge}</span>
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-400">
+                            Ref: {paymentCycleBadge}
+                          </span>
+                        </div>
+
+                        {/* Barra de Ações Rápidas no Rodapé */}
+                        <div
+                          className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/60"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {!isConfirming ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingFuelLog(item);
+                                }}
+                                className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-amber-400 border border-slate-700/60 active:scale-[0.96] transition cursor-pointer"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Editar Abastecimento</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDeleteId(item.id);
+                                }}
+                                className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 active:scale-[0.96] transition cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Excluir</span>
+                              </button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2 bg-rose-950/90 border border-rose-600/50 p-1.5 rounded-xl">
+                              <span className="text-xs font-semibold text-rose-300 px-1">
+                                Confirmar exclusão?
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(item.id);
+                                }}
+                                disabled={isDeleting}
+                                className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                              >
+                                {isDeleting ? '...' : 'Sim, Excluir'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDeleteId(null);
+                                }}
+                                className="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               );
             })}
           </AnimatePresence>
         </motion.div>
-      </section>
+          </section>
+        </div>
+      </div>
 
       {/* Modal Responsivo de Edição de Abastecimento */}
       {editingFuelLog && (
@@ -874,6 +1108,27 @@ export const FuelPage: React.FC = () => {
           onSuccess={handleEditSuccess}
         />
       )}
+
+      {/* Botão de Ação Flutuante (FAB) Mobile */}
+      <FloatingActionButton
+        label="+ Abastecer"
+        onClick={handleOpenNewForm}
+      />
+
+      {/* Gaveta Inferior Deslizante (Bottom Sheet) no Mobile */}
+      <BottomSheetModal
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        title="Lançar Abastecimento"
+        subtitle="Registre os dados da bomba para cálculo de autonomia"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 text-slate-950 flex items-center justify-center font-bold shadow-md shadow-amber-500/20">
+            <Fuel className="w-5 h-5 stroke-[2.2]" />
+          </div>
+        }
+      >
+        {renderFuelForm(true)}
+      </BottomSheetModal>
     </div>
   );
 };
