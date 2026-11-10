@@ -16,6 +16,7 @@ const VIEW_TITLES: Record<ViewType, string> = {
   fuel: 'Combustível',
   maintenance: 'Oficina e Manutenção',
   vehicle: 'Meu Veículo',
+  tools: 'Tools & Calculadoras',
   profile: 'Meu Perfil',
   admin: 'Painel Admin',
 };

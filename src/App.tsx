@@ -10,6 +10,7 @@ import { VehiclePage } from './components/vehicle/VehiclePage';
 import { FuelPage } from './components/fuel/FuelPage';
 import { MaintenancePage } from './components/maintenance/MaintenancePage';
 import { ProfilePage } from './components/profile/ProfilePage';
+import { ToolsPage } from './components/tools/ToolsPage';
 import { AdminPage } from './components/admin/AdminPage';
 import { Truck, ShieldAlert, LogOut } from 'lucide-react';
 
@@ -19,6 +20,7 @@ const VIEW_TO_HASH: Record<ViewType, string> = {
   fuel: '#combustivel',
   maintenance: '#manutencao',
   vehicle: '#veiculo',
+  tools: '#tools',
   profile: '#perfil',
   admin: '#admin',
 };
@@ -49,6 +51,10 @@ const resolveViewFromLocation = (): ViewType => {
     case 'veiculo':
     case 'vehicle':
       return 'vehicle';
+    case 'tools':
+    case 'ferramentas':
+    case 'calculadoras':
+      return 'tools';
     case 'admin':
       return 'admin';
     case 'ganhos':
@@ -150,6 +156,7 @@ const MainContent: React.FC = () => {
       {effectiveView === 'fuel' && <FuelPage />}
       {effectiveView === 'maintenance' && <MaintenancePage />}
       {effectiveView === 'vehicle' && <VehiclePage />}
+      {effectiveView === 'tools' && <ToolsPage />}
       {effectiveView === 'profile' && <ProfilePage />}
       {effectiveView === 'admin' && <AdminPage />}
     </AppLayout>

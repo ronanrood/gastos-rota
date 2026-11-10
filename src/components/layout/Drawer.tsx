@@ -12,6 +12,7 @@ import {
   ChevronRight,
   User,
   CalendarDays,
+  Calculator,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/useAuth';
 import { PaymentConfigModal } from '../payment/PaymentConfigModal';
@@ -24,6 +25,7 @@ export type ViewType =
   | 'fuel'
   | 'maintenance'
   | 'vehicle'
+  | 'tools'
   | 'profile'
   | 'admin';
 
@@ -92,6 +94,13 @@ export const Drawer: React.FC<DrawerProps> = ({
       label: 'Meu Veículo',
       subtitle: 'Dados do carro e quilometragem',
       icon: Car,
+    },
+    {
+      id: 'tools' as ViewType,
+      label: 'Tools (Ferramentas)',
+      subtitle: 'Calculadoras, rotas e custos',
+      icon: Calculator,
+      badge: 'Novo',
     },
     {
       id: 'profile' as ViewType,

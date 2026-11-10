@@ -1,6 +1,6 @@
 import React from 'react';
 import { type ViewType } from '../layout/Drawer';
-import { BarChart3, Fuel, Wrench, Car, ShieldCheck, ArrowLeft, Clock, User } from 'lucide-react';
+import { BarChart3, Fuel, Wrench, Car, ShieldCheck, ArrowLeft, Clock, User, Calculator } from 'lucide-react';
 
 interface PlaceholderViewProps {
   view: ViewType;
@@ -80,6 +80,19 @@ const VIEW_CONFIG: Record<
       'Transportadora, rota e chave PIX',
       'Endereço completo com busca por CEP',
       'Alteração de e-mail e senha de acesso',
+    ],
+  },
+  tools: {
+    title: 'Tools (Ferramentas)',
+    description: 'Calculadoras e simuladores para tomada de decisão rápida no dia a dia.',
+    table: 'Simuladores interativos',
+    icon: Calculator,
+    color: 'teal',
+    features: [
+      'Comparador inteligente de combustível',
+      'Simulador de viabilidade de rotas',
+      'Calculadora de meta de ganhos e entregas',
+      'Custo operacional real por KM',
     ],
   },
   admin: {
