@@ -659,42 +659,47 @@ export const FuelPage: React.FC = () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* Cards de Métricas Resumo (Grade Compacta 3 Colunas no Mobile e Desktop) */}
+      {/* Cards de Métricas Resumo (Bento Grid Assimétrico no Mobile / 3 Colunas no Desktop) */}
       {fuelLogs.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
-              Total Combustível
-            </span>
-            <span className="text-base sm:text-xl font-extrabold text-amber-400 mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+          {/* Linha 1: TOTAL COMBUSTÍVEL (Destaque Principal col-span-2 no mobile) */}
+          <div className="col-span-2 md:col-span-1 w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-5 min-w-0 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Total Combustível
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                {filteredLogs.length} {filteredLogs.length === 1 ? 'abastecimento' : 'abastecimentos'}
+              </span>
+            </div>
+            <div className="mt-2 text-2xl sm:text-3xl font-black text-amber-400 font-mono tabular-nums tracking-tight">
               {formatCurrency(totalGastoPeriodo)}
-            </span>
-            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
-              {filteredLogs.length} abastecimentos
-            </span>
+            </div>
           </div>
 
-          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+          {/* Linha 2 (Esquerda): VOLUME TOTAL */}
+          <div className="col-span-1 w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 sm:p-4 min-w-0 flex flex-col justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block truncate">
               Volume Total
             </span>
-            <span className="text-base sm:text-xl font-extrabold text-white mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
-              {totalLitrosPeriodo.toFixed(1)} L/m³
+            <span className="text-lg sm:text-xl font-black text-white mt-1.5 block font-mono tabular-nums">
+              {totalLitrosPeriodo.toFixed(1)} <span className="text-xs font-normal text-zinc-400">L/m³</span>
             </span>
-            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
-              {filteredLogs.length > 0 ? `~${(totalLitrosPeriodo / filteredLogs.length).toFixed(1)}/vez` : '-'}
+            <span className="text-[11px] text-zinc-400 mt-1 block truncate">
+              {filteredLogs.length > 0 ? `~${(totalLitrosPeriodo / filteredLogs.length).toFixed(1)} L/vez` : '-'}
             </span>
           </div>
 
-          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+          {/* Linha 2 (Direita): PREÇO MÉDIO */}
+          <div className="col-span-1 w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 sm:p-4 min-w-0 flex flex-col justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block truncate">
               Preço Médio
             </span>
-            <span className="text-base sm:text-xl font-extrabold text-teal-400 mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
+            <span className="text-lg sm:text-xl font-black text-teal-400 mt-1.5 block font-mono tabular-nums">
               {precoMedioLitroPeriodo > 0 ? formatCurrency(precoMedioLitroPeriodo) : 'R$ 0,00'}
             </span>
-            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
-              por litro/m³
+            <span className="text-[11px] text-zinc-400 mt-1 block truncate">
+              por litro ou m³
             </span>
           </div>
         </div>

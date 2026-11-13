@@ -24,13 +24,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenDrawer, currentTitle, onOp
   return (
     <header className="shrink-0 z-30 pt-[max(2.75rem,env(safe-area-inset-top))] md:pt-0 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800/80 text-white shadow-md">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
-        {/* Left: Hamburger & Brand */}
+        {/* Left: Brand & Optional Desktop Hamburger */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             type="button"
             onClick={onOpenDrawer}
             aria-label="Abrir menu de navegação"
-            className="w-11 h-11 min-h-[44px] min-w-[44px] flex items-center justify-center -ml-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700 active:scale-[0.95] transition cursor-pointer"
+            className="hidden md:flex w-11 h-11 min-h-[44px] min-w-[44px] items-center justify-center -ml-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700 active:scale-[0.95] transition cursor-pointer"
           >
             <Menu className="w-6 h-6" />
           </button>

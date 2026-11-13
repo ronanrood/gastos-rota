@@ -795,44 +795,46 @@ export const DailyEarningsPage: React.FC = () => {
         </motion.a>
       )}
 
-      {/* Cards de Resumo Rápido (Grade Simétrica de 3 Colunas no Mobile e Desktop) */}
+      {/* Cards de Resumo Rápido (Bento Grid Assimétrico no Mobile / 3 Colunas no Desktop) */}
       {earningsList.length > 0 && (
-        <div className="grid grid-cols-3 gap-2.5">
-          {/* Coluna 1: FATURADO */}
-          <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 min-w-0 flex flex-col justify-between">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 block truncate">
-              Faturado
-            </span>
-            <span className="text-base sm:text-xl font-bold text-emerald-400 mt-1 block font-mono tabular-nums truncate">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+          {/* Linha 1: TOTAL FATURADO (Destaque Principal col-span-2 no mobile) */}
+          <div className="col-span-2 md:col-span-1 w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-5 min-w-0 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Total Faturado
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                {earningsList.length} {earningsList.length === 1 ? 'dia lançado' : 'dias lançados'}
+              </span>
+            </div>
+            <div className="mt-2 text-2xl sm:text-3xl font-black text-emerald-400 font-mono tabular-nums tracking-tight">
               {formatCurrency(totalFaturadoAcumulado)}
+            </div>
+          </div>
+
+          {/* Linha 2 (Esquerda): PEÇAS ENTREGUES */}
+          <div className="col-span-1 w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 sm:p-4 min-w-0 flex flex-col justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block truncate">
+              Peças Entregues
             </span>
-            <span className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 block truncate">
-              {earningsList.length} {earningsList.length === 1 ? 'dia' : 'dias'}
+            <span className="text-lg sm:text-xl font-black text-white mt-1.5 block font-mono tabular-nums">
+              {totalPecasEntregues.toLocaleString('pt-BR')} <span className="text-xs font-normal text-zinc-400">un.</span>
+            </span>
+            <span className="text-[11px] text-zinc-400 mt-1 block truncate">
+              ~{(totalPecasEntregues / earningsList.length).toFixed(0)} peças/dia
             </span>
           </div>
 
-          {/* Coluna 2: PEÇAS */}
-          <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 min-w-0 flex flex-col justify-between">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 block truncate">
-              Peças
-            </span>
-            <span className="text-base sm:text-xl font-bold text-white mt-1 block font-mono tabular-nums truncate">
-              {totalPecasEntregues.toLocaleString('pt-BR')} un.
-            </span>
-            <span className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 block truncate">
-              {(totalPecasEntregues / earningsList.length).toFixed(0)}/dia
-            </span>
-          </div>
-
-          {/* Coluna 3: KM RODADO */}
-          <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 min-w-0 flex flex-col justify-between">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 block truncate">
+          {/* Linha 2 (Direita): KM RODADO */}
+          <div className="col-span-1 w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 sm:p-4 min-w-0 flex flex-col justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block truncate">
               KM Rodado
             </span>
-            <span className="text-base sm:text-xl font-bold text-teal-400 mt-1 block font-mono tabular-nums truncate">
-              {totalKmAcumulado.toFixed(0)} km
+            <span className="text-lg sm:text-xl font-black text-teal-400 mt-1.5 block font-mono tabular-nums">
+              {totalKmAcumulado.toFixed(0)} <span className="text-xs font-normal text-zinc-400">km</span>
             </span>
-            <span className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 block truncate">
+            <span className="text-[11px] text-zinc-400 mt-1 block truncate">
               {totalKmAcumulado > 0
                 ? `${formatCurrency(totalFaturadoAcumulado / totalKmAcumulado)}/km`
                 : 'R$ 0,00/km'}
@@ -840,6 +842,19 @@ export const DailyEarningsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* BOTÃO DE DESTAQUE INTEGRADO: + LANÇAR GANHO DO DIA (Mobile First - Logo abaixo dos KPIs) */}
+      <div className="lg:hidden">
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          type="button"
+          onClick={handleOpenNewForm}
+          className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 font-bold text-sm rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition cursor-pointer select-none"
+        >
+          <PlusCircle className="w-5 h-5 stroke-[2.5]" />
+          <span>+ Lançar Ganho do Dia</span>
+        </motion.button>
+      </div>
 
       {/* CARDS DE RECEBIMENTOS (FECHAMENTO DE QUINZENA/MÊS) */}
       <PaymentCyclesCards
@@ -851,19 +866,6 @@ export const DailyEarningsPage: React.FC = () => {
         onRecordReverted={handlePaymentRecordReverted}
         onRefresh={refreshEarnings}
       />
-
-      {/* BOTÃO DE DESTAQUE INTEGRADO: + LANÇAR DIA (Ação Principal no Mobile) */}
-      <div className="lg:hidden">
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          type="button"
-          onClick={handleOpenNewForm}
-          className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 font-black text-sm rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition cursor-pointer select-none"
-        >
-          <PlusCircle className="w-5 h-5 stroke-[2.5]" />
-          <span>+ Lançar Dia</span>
-        </motion.button>
-      </div>
 
       {/* LAYOUT PRINCIPAL: No desktop, exibe o formulário na coluna lateral aberta (lg:grid) e o histórico na direita */}
       <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
