@@ -180,8 +180,7 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
     }
   };
 
-  const renderCycleCard = (cycle: PaymentCycleInfo, index: number) => {
-    const isFirst = index === 0;
+  const renderCycleCard = (cycle: PaymentCycleInfo, _index: number) => {
     const isPaid = cycle.status === 'pago';
     const isLate = cycle.status === 'atrasado';
     const rec = cycle.paymentRecord;
@@ -204,18 +203,16 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
             setSelectedCycleDetails(cycle);
           }
         }}
-        className={`w-full group text-left p-4 sm:p-5 rounded-3xl border transition-all duration-300 cursor-pointer relative overflow-hidden backdrop-blur-md shadow-lg hover:shadow-xl flex flex-col justify-between ${
+        className={`w-full group text-left p-4 sm:p-5 rounded-2xl border transition-all duration-300 cursor-pointer relative overflow-hidden backdrop-blur-md shadow-lg flex flex-col justify-between ${
           isHighlighted
-            ? 'bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 border-emerald-400 ring-2 ring-emerald-500/80 shadow-lg shadow-emerald-500/30'
+            ? 'bg-gradient-to-br from-zinc-900 via-emerald-950/40 to-zinc-900 border-emerald-400 ring-2 ring-emerald-500/80 shadow-lg shadow-emerald-500/30'
             : isPaid
-            ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border-emerald-500/50 hover:border-emerald-500/70 ring-2 ring-emerald-500/50 shadow-emerald-500/15'
+            ? 'bg-zinc-900/80 border-emerald-500/40 ring-1 ring-emerald-500/30'
             : isGoalHit
-            ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 border-amber-500/40 hover:border-amber-500/60 ring-1 ring-amber-500/30'
+            ? 'bg-zinc-900/80 border-amber-500/40 ring-1 ring-amber-500/30'
             : isLate
-            ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/30 border-rose-500/40 hover:border-rose-500/60 ring-1 ring-rose-500/20'
-            : cycle.isCurrent || (isFirst && tipo === 'quinzenal')
-            ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/40 hover:border-emerald-500/60 ring-1 ring-emerald-500/20'
-            : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+            ? 'bg-zinc-900/80 border-rose-500/40 ring-1 ring-rose-500/20'
+            : 'bg-zinc-900/80 border-emerald-500/20 hover:border-emerald-500/40'
         }`}
       >
         {/* Glow decorativo suave */}
@@ -367,13 +364,13 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
 
           {isPaid ? (
             <motion.button
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setCycleToConfirm(cycle);
               }}
-              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/80 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              className="h-11 w-full sm:w-auto px-4 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/80 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
               title="Editar dados do recebimento"
             >
               <Pencil className="w-3.5 h-3.5 text-emerald-400" />
@@ -381,16 +378,16 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
             </motion.button>
           ) : (
             <motion.button
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setCycleToConfirm(cycle);
               }}
-              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
+              className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 font-semibold h-11 rounded-xl w-full sm:w-auto px-4 text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
               title="Confirmar que o pagamento caiu na conta"
             >
-              <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+              <CheckCircle2 className="w-4 h-4 stroke-[2.2]" />
               <span>Marcar como Recebido</span>
             </motion.button>
           )}
@@ -401,7 +398,7 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
 
   return (
     <>
-      <div className="space-y-3">
+      <div className="space-y-3 w-full">
         {/* Header da Seção de Recebimentos */}
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
@@ -431,9 +428,9 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
           </button>
         </div>
 
-        {/* Seletor Deslizante (Segmented Control) no Mobile para 1ª / 2ª Quinzena */}
+        {/* Seletor de Abas Compacto no Mobile para 1ª / 2ª Quinzena */}
         {tipo === 'quinzenal' && cycles.length > 1 && (
-          <div className="md:hidden grid grid-cols-2 p-1 bg-slate-900 border border-slate-800 rounded-2xl gap-1">
+          <div className="md:hidden grid grid-cols-2 p-1 bg-zinc-900 border border-zinc-800/80 rounded-xl gap-1 w-full">
             {cycles.map((c, idx) => {
               const isSelected = activeCycleIndex === idx;
               return (
@@ -441,14 +438,14 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
                   key={c.referenciaChave}
                   type="button"
                   onClick={() => setActiveCycleIndex(idx)}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer select-none ${
                     isSelected
-                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      ? 'bg-emerald-500 text-zinc-950 shadow-sm font-black'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
                   }`}
                 >
                   <span>{c.cycleName}</span>
-                  <span className={`text-[10px] ${isSelected ? 'text-slate-950 font-black' : 'text-slate-500'}`}>
+                  <span className={`text-[10px] ${isSelected ? 'text-zinc-950 font-black' : 'text-zinc-500'}`}>
                     (Dia {c.diaPagamento})
                   </span>
                 </button>

@@ -40,9 +40,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       aria-label="Navegação rápida inferior"
-      className="shrink-0 fixed bottom-0 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-lg border-t border-zinc-800/80 pb-safe md:hidden"
+      className="shrink-0 fixed bottom-0 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-lg border-t border-zinc-800/80 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
     >
-      <div className="grid grid-cols-5 h-16 items-center w-full px-1">
+      <div className="grid grid-cols-5 h-16 items-center w-full px-0.5">
         {navShortcuts.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
@@ -53,7 +53,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               type="button"
               whileTap={{ scale: 0.92 }}
               onClick={() => onSelectView(item.id)}
-              className={`relative flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-xl transition-colors cursor-pointer select-none px-0.5 ${
+              className={`relative flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-xl transition-colors cursor-pointer select-none px-0 ${
                 isActive
                   ? 'text-emerald-400 font-bold'
                   : 'text-zinc-400 hover:text-zinc-200'
@@ -63,7 +63,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               {isActive && (
                 <motion.div
                   layoutId="bottomNavActiveTabIndicator"
-                  className="absolute inset-x-1 inset-y-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 -z-10"
+                  className="absolute inset-x-0.5 inset-y-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 -z-10"
                   transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                 />
               )}
@@ -75,7 +75,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
               </motion.div>
-              <span className="text-[11px] leading-tight mt-0.5 tracking-tight truncate w-full text-center block">
+              <span className="text-[10px] font-medium leading-tight mt-0.5 tracking-tight whitespace-nowrap w-full text-center block">
                 {item.label}
               </span>
             </motion.button>
@@ -87,12 +87,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           type="button"
           whileTap={{ scale: 0.92 }}
           onClick={onOpenDrawer}
-          className="flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer select-none px-0.5"
+          className="flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer select-none px-0"
         >
           <div className="p-1 rounded-lg bg-zinc-800/60 text-zinc-300">
             <Menu className="w-5 h-5 stroke-[2]" />
           </div>
-          <span className="text-[11px] leading-tight mt-0.5 tracking-tight truncate w-full text-center font-medium block">
+          <span className="text-[10px] font-medium leading-tight mt-0.5 tracking-tight whitespace-nowrap w-full text-center block">
             Menu
           </span>
         </motion.button>

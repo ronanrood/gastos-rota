@@ -795,44 +795,47 @@ export const DailyEarningsPage: React.FC = () => {
         </motion.a>
       )}
 
-      {/* Cards de Resumo Rápido (Grade Compacta 3 Colunas no Mobile e Desktop) */}
+      {/* Cards de Resumo Rápido (Grade Simétrica de 3 Colunas no Mobile e Desktop) */}
       {earningsList.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
-              Total Faturado
+        <div className="grid grid-cols-3 gap-2.5">
+          {/* Coluna 1: FATURADO */}
+          <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 min-w-0 flex flex-col justify-between">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 block truncate">
+              Faturado
             </span>
-            <span className="text-base sm:text-xl font-extrabold text-emerald-400 mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
+            <span className="text-base sm:text-xl font-bold text-emerald-400 mt-1 block font-mono tabular-nums truncate">
               {formatCurrency(totalFaturadoAcumulado)}
             </span>
-            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
-              {earningsList.length} dias
+            <span className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 block truncate">
+              {earningsList.length} {earningsList.length === 1 ? 'dia' : 'dias'}
             </span>
           </div>
 
-          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
-              Peças Entregues
+          {/* Coluna 2: PEÇAS */}
+          <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 min-w-0 flex flex-col justify-between">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 block truncate">
+              Peças
             </span>
-            <span className="text-base sm:text-xl font-extrabold text-white mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
-              {totalPecasEntregues.toLocaleString('pt-BR')}
+            <span className="text-base sm:text-xl font-bold text-white mt-1 block font-mono tabular-nums truncate">
+              {totalPecasEntregues.toLocaleString('pt-BR')} un.
             </span>
-            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
-              ~{(totalPecasEntregues / earningsList.length).toFixed(0)}/dia
+            <span className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 block truncate">
+              {(totalPecasEntregues / earningsList.length).toFixed(0)}/dia
             </span>
           </div>
 
-          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
-              Km & Margem
+          {/* Coluna 3: KM RODADO */}
+          <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 min-w-0 flex flex-col justify-between">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 block truncate">
+              KM Rodado
             </span>
-            <span className="text-base sm:text-xl font-extrabold text-teal-400 mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
+            <span className="text-base sm:text-xl font-bold text-teal-400 mt-1 block font-mono tabular-nums truncate">
               {totalKmAcumulado.toFixed(0)} km
             </span>
-            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
+            <span className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 block truncate">
               {totalKmAcumulado > 0
                 ? `${formatCurrency(totalFaturadoAcumulado / totalKmAcumulado)}/km`
-                : 'Média/km'}
+                : 'R$ 0,00/km'}
             </span>
           </div>
         </div>
@@ -849,16 +852,16 @@ export const DailyEarningsPage: React.FC = () => {
         onRefresh={refreshEarnings}
       />
 
-      {/* BOTÃO DE DESTAQUE INTEGRADO: REGISTRAR GANHO DE HOJE (Ação Principal no Mobile) */}
+      {/* BOTÃO DE DESTAQUE INTEGRADO: + LANÇAR DIA (Ação Principal no Mobile) */}
       <div className="lg:hidden">
         <motion.button
           whileTap={{ scale: 0.98 }}
           type="button"
           onClick={handleOpenNewForm}
-          className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:from-emerald-600 active:to-teal-600 text-slate-950 font-black text-sm rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition cursor-pointer"
+          className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 font-black text-sm rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition cursor-pointer select-none"
         >
           <PlusCircle className="w-5 h-5 stroke-[2.5]" />
-          <span>+ Registrar Ganho de Hoje</span>
+          <span>+ Lançar Dia</span>
         </motion.button>
       </div>
 
