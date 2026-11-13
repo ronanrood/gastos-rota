@@ -26,7 +26,6 @@ import {
   Plus,
 } from 'lucide-react';
 import { BottomSheetModal } from '../common/BottomSheetModal';
-import { FloatingActionButton } from '../common/FloatingActionButton';
 import { PaymentCyclesCards } from '../payment/PaymentCyclesCards';
 import { PaymentCyclesHistory } from '../payment/PaymentCyclesHistory';
 import { EditEarningModal } from './EditEarningModal';
@@ -760,7 +759,7 @@ export const DailyEarningsPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="w-full space-y-6">
       {/* ALERTA DISCRETO DE MANUTENÇÃO PREVENTIVA */}
       {healthAlert && (
         <motion.a
@@ -796,41 +795,41 @@ export const DailyEarningsPage: React.FC = () => {
         </motion.a>
       )}
 
-      {/* Cards de Resumo Rápido */}
+      {/* Cards de Resumo Rápido (Grade Compacta 3 Colunas no Mobile e Desktop) */}
       {earningsList.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Total Faturado
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-emerald-400 mt-1 block">
+            <span className="text-base sm:text-xl font-extrabold text-emerald-400 mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
               {formatCurrency(totalFaturadoAcumulado)}
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
-              {earningsList.length} dias lançados
+            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
+              {earningsList.length} dias
             </span>
           </div>
 
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Peças Entregues
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-white mt-1 block">
-              {totalPecasEntregues.toLocaleString('pt-BR')} un.
+            <span className="text-base sm:text-xl font-extrabold text-white mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
+              {totalPecasEntregues.toLocaleString('pt-BR')}
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
-              Média {(totalPecasEntregues / earningsList.length).toFixed(0)}/dia
+            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
+              ~{(totalPecasEntregues / earningsList.length).toFixed(0)}/dia
             </span>
           </div>
 
-          <div className="col-span-2 sm:col-span-1 bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-              Km & Rentabilidade
+          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+              Km & Margem
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-teal-400 mt-1 block">
+            <span className="text-base sm:text-xl font-extrabold text-teal-400 mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
               {totalKmAcumulado.toFixed(0)} km
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
+            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
               {totalKmAcumulado > 0
                 ? `${formatCurrency(totalFaturadoAcumulado / totalKmAcumulado)}/km`
                 : 'Média/km'}
@@ -849,6 +848,19 @@ export const DailyEarningsPage: React.FC = () => {
         onRecordReverted={handlePaymentRecordReverted}
         onRefresh={refreshEarnings}
       />
+
+      {/* BOTÃO DE DESTAQUE INTEGRADO: REGISTRAR GANHO DE HOJE (Ação Principal no Mobile) */}
+      <div className="lg:hidden">
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          type="button"
+          onClick={handleOpenNewForm}
+          className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:from-emerald-600 active:to-teal-600 text-slate-950 font-black text-sm rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition cursor-pointer"
+        >
+          <PlusCircle className="w-5 h-5 stroke-[2.5]" />
+          <span>+ Registrar Ganho de Hoje</span>
+        </motion.button>
+      </div>
 
       {/* LAYOUT PRINCIPAL: No desktop, exibe o formulário na coluna lateral aberta (lg:grid) e o histórico na direita */}
       <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
@@ -1032,7 +1044,7 @@ export const DailyEarningsPage: React.FC = () => {
                       key={item.id}
                       layout
                       variants={staggerItemVariants}
-                      className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl overflow-hidden shadow-sm transition-colors"
+                      className="w-full overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900/70 shadow-sm transition-colors mb-2"
                     >
                       {/* Linha Compacta (1 Linha - Estado Fechado por Padrão) */}
                       <div
@@ -1046,10 +1058,10 @@ export const DailyEarningsPage: React.FC = () => {
                           }
                         }}
                         aria-expanded={isExpanded}
-                        className="w-full flex items-center justify-between py-3 px-4 text-left cursor-pointer hover:bg-slate-800/40 active:bg-slate-800/60 transition select-none gap-2 min-h-[48px]"
+                        className="w-full flex items-center justify-between gap-3 min-w-0 p-3.5 text-left cursor-pointer hover:bg-slate-800/40 active:bg-slate-800/60 transition select-none min-h-[48px]"
                       >
                         {/* Esquerda: Data Compacta + Qtd Peças + Mini-ícones */}
-                        <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono tracking-tight shrink-0 border border-slate-700/50">
                             {compactDate}
                           </span>
@@ -1079,11 +1091,11 @@ export const DailyEarningsPage: React.FC = () => {
 
                         {/* Direita: Valor Total Bruto + ChevronDown que gira 180deg */}
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-sm sm:text-base font-black text-emerald-400 font-mono">
+                          <span className="text-sm sm:text-base font-black text-emerald-400 font-mono tabular-nums whitespace-nowrap">
                             {formatCurrency(faturamento)}
                           </span>
                           <ChevronDown
-                            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                            className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${
                               isExpanded ? 'rotate-180 text-emerald-400' : ''
                             }`}
                           />
@@ -1098,25 +1110,25 @@ export const DailyEarningsPage: React.FC = () => {
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2, ease: 'easeInOut' }}
-                            className="overflow-hidden border-t border-slate-800/60 px-4 pt-3 pb-4 space-y-3"
+                            className="overflow-hidden border-t border-slate-800/80 bg-zinc-900/50 p-3.5 space-y-3"
                           >
                             {/* Grid Completo de Detalhes */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                                   Valor Unitário
                                 </span>
-                                <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                                <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block truncate">
                                   {formatCurrency(item.valor_unitario_peca)} / un.
                                 </span>
                               </div>
 
-                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                                   Bônus Extra
                                 </span>
                                 <span
-                                  className={`font-mono font-bold text-xs sm:text-sm mt-0.5 block ${
+                                  className={`font-mono font-bold text-xs sm:text-sm mt-0.5 block truncate ${
                                     item.valor_extra_bonus > 0 ? 'text-amber-400' : 'text-slate-400'
                                   }`}
                                 >
@@ -1124,20 +1136,20 @@ export const DailyEarningsPage: React.FC = () => {
                                 </span>
                               </div>
 
-                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                                   KM Rodado
                                 </span>
-                                <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                                <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block truncate">
                                   {item.km_rodado > 0 ? `${item.km_rodado.toLocaleString('pt-BR')} km` : '0 km'}
                                 </span>
                               </div>
 
-                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                              <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                                <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                                   Ganho Bruto / KM
                                 </span>
-                                <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm mt-0.5 block">
+                                <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm mt-0.5 block truncate">
                                   {rendimentoKm > 0 ? `${formatCurrency(rendimentoKm)}/km` : '---'}
                                 </span>
                               </div>
@@ -1145,11 +1157,11 @@ export const DailyEarningsPage: React.FC = () => {
 
                             {/* Referência da Quinzena / Ciclo */}
                             <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/40 px-3 py-2 rounded-xl border border-slate-800/40 flex-wrap gap-2">
-                              <span className="flex items-center gap-1.5 font-medium">
-                                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-                                <span>{fullBadge}</span>
+                              <span className="flex items-center gap-1.5 font-medium truncate">
+                                <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                <span className="truncate">{fullBadge}</span>
                               </span>
-                              <span className="text-[11px] font-mono text-slate-400">
+                              <span className="text-[11px] font-mono text-slate-400 shrink-0">
                                 Ref: {paymentCycleBadge}
                               </span>
                             </div>
@@ -1158,24 +1170,24 @@ export const DailyEarningsPage: React.FC = () => {
                             {item.observacoes && (
                               <div className="text-xs text-slate-300 italic bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 flex items-start gap-2">
                                 <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                                <span>&quot;{item.observacoes}&quot;</span>
+                                <span className="break-words">&quot;{item.observacoes}&quot;</span>
                               </div>
                             )}
 
                             {/* Barra de Ações Rápidas no Rodapé */}
                             <div
-                              className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/60"
+                              className="pt-2 border-t border-slate-800/80 w-full"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {!isConfirming ? (
-                                <>
+                                <div className="grid grid-cols-2 gap-2 w-full">
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setEditingEarning(item);
                                     }}
-                                    className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-emerald-400 border border-slate-700/60 active:scale-[0.96] transition cursor-pointer"
+                                    className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-emerald-400 border border-slate-700/60 active:scale-[0.96] transition cursor-pointer w-full"
                                   >
                                     <Pencil className="w-3.5 h-3.5" />
                                     <span>Editar Lançamento</span>
@@ -1187,38 +1199,40 @@ export const DailyEarningsPage: React.FC = () => {
                                       e.stopPropagation();
                                       setConfirmDeleteId(item.id);
                                     }}
-                                    className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 active:scale-[0.96] transition cursor-pointer"
+                                    className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 active:scale-[0.96] transition cursor-pointer w-full"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                     <span>Excluir</span>
                                   </button>
-                                </>
+                                </div>
                               ) : (
-                                <div className="flex items-center gap-2 bg-rose-950/90 border border-rose-600/50 p-1.5 rounded-xl">
-                                  <span className="text-xs font-semibold text-rose-300 px-1">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 bg-rose-950/90 border border-rose-600/50 p-2 rounded-xl w-full">
+                                  <span className="text-xs font-semibold text-rose-300 px-1 text-center sm:text-left">
                                     Confirmar exclusão?
                                   </span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(item.id);
-                                    }}
-                                    disabled={isDeleting}
-                                    className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
-                                  >
-                                    {isDeleting ? '...' : 'Sim, Excluir'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setConfirmDeleteId(null);
-                                    }}
-                                    className="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
-                                  >
-                                    Cancelar
-                                  </button>
+                                  <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(item.id);
+                                      }}
+                                      disabled={isDeleting}
+                                      className="h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                                    >
+                                      {isDeleting ? '...' : 'Sim, Excluir'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setConfirmDeleteId(null);
+                                      }}
+                                      className="h-9 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -1254,12 +1268,6 @@ export const DailyEarningsPage: React.FC = () => {
           onSuccess={handleEditSuccess}
         />
       )}
-
-      {/* Botão de Ação Flutuante (FAB) Mobile */}
-      <FloatingActionButton
-        label="+ Lançar Dia"
-        onClick={handleOpenNewForm}
-      />
 
       {/* Gaveta Inferior Deslizante (Bottom Sheet) no Mobile */}
       <BottomSheetModal

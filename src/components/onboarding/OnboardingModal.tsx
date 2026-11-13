@@ -241,14 +241,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
       {/* Backdrop com blur escuro */}
       <motion.div
         variants={modalBackdropVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="fixed inset-0 bg-black/85 backdrop-blur-md cursor-pointer"
+        className="fixed inset-0 bg-transparent cursor-pointer"
         onClick={handleSkip}
       />
 
@@ -260,7 +260,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         initial="hidden"
         animate="visible"
         exit="exit"
-        className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto z-10 text-zinc-100"
+        className="w-full sm:max-w-lg max-h-[88dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-5 sm:p-7 shadow-2xl relative z-10 text-zinc-100 bg-zinc-900 border border-zinc-800 overscroll-contain"
       >
         {/* Topo: Barra de Progresso e Botão Pular */}
         <div className="flex items-center justify-between pb-4 border-b border-zinc-800/80">

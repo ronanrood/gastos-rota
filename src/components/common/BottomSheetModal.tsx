@@ -33,43 +33,43 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center lg:hidden">
-          {/* Backdrop escurecido com blur */}
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
+          {/* Backdrop escurecido clicável para fechar */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/75 backdrop-blur-sm cursor-pointer"
+            className="fixed inset-0 cursor-pointer"
             aria-hidden="true"
           />
 
-          {/* Gaveta Deslizante Inferior (Bottom Sheet) */}
+          {/* Caixa do formulário responsiva segura (sem quebrar no teclado) */}
           <motion.div
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
+            initial={{ y: 32, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 32, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-xl bg-slate-900 border-t border-slate-700/80 sm:border sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[88vh] z-10 overflow-hidden"
+            className="relative w-full sm:max-w-lg max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-5 bg-zinc-900 border border-zinc-800 text-zinc-100 shadow-2xl z-10 overscroll-contain"
           >
-            {/* Barra superior de arrasto (drag handle) */}
-            <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-3 mb-2 shrink-0" />
+            {/* Barra superior de arrasto (drag handle no mobile) */}
+            <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mb-3 sm:hidden shrink-0" />
 
             {/* Cabeçalho */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800/80 shrink-0">
-              <div className="flex items-center gap-3">
-                {icon}
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-zinc-800/80 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                {icon && <div className="shrink-0">{icon}</div>}
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
                     {title}
                   </h3>
                   {subtitle && (
-                    <p className="text-xs text-slate-400">{subtitle}</p>
+                    <p className="text-xs text-zinc-400 truncate">{subtitle}</p>
                   )}
                 </div>
               </div>
@@ -77,15 +77,15 @@ export const BottomSheetModal: React.FC<BottomSheetModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Fechar gaveta"
-                className="w-9 h-9 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition cursor-pointer"
+                aria-label="Fechar modal"
+                className="w-9 h-9 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 active:bg-zinc-700 transition cursor-pointer shrink-0 ml-2"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Conteúdo com rolagem suave e espaço para teclado */}
-            <div className="overflow-y-auto px-5 py-4 pb-8 space-y-4 overscroll-contain">
+            <div className="space-y-4">
               {children}
             </div>
           </motion.div>

@@ -8,7 +8,6 @@ import { PaymentConfigModal } from './PaymentConfigModal';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { triggerSuccessCelebration } from '../../lib/celebrate';
-import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   CalendarDays,
   Calendar,
@@ -120,9 +119,10 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
   }, [earnings, profile, activeMonthStr, activeRecords]);
 
   // Foca automaticamente no ciclo da 2ª quinzena caso hoje seja após o dia 16
-  const defaultCycleIndex = useMemo(() => {
-    return todayDay >= 16 && cycles.length > 1 ? 1 : 0;
-  }, [todayDay, cycles.length]);
+  const defaultCycleIndex = todayDay >= 16 && cycles.length > 1 ? 1 : 0;
+  const [userSelectedCycleIndex, setUserSelectedCycleIndex] = useState<number | null>(null);
+  const activeCycleIndex = userSelectedCycleIndex ?? defaultCycleIndex;
+  const setActiveCycleIndex = (idx: number) => setUserSelectedCycleIndex(idx);
 
   // Celebração discreta caso o ciclo ativo atinja a meta pela 1ª vez nesta sessão
   useEffect(() => {
@@ -180,6 +180,225 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
     }
   };
 
+  const renderCycleCard = (cycle: PaymentCycleInfo, index: number) => {
+    const isFirst = index === 0;
+    const isPaid = cycle.status === 'pago';
+    const isLate = cycle.status === 'atrasado';
+    const rec = cycle.paymentRecord;
+    const isHighlighted = recentlyPaidKey === cycle.referenciaChave;
+
+    // Metas do Ciclo
+    const cycleTarget = tipo === 'quinzenal' ? savedGoal / 2 : savedGoal;
+    const cycleProgress = cycleTarget > 0 ? (cycle.totalFaturamento / cycleTarget) * 100 : 0;
+    const isGoalHit = cycleProgress >= 100;
+    const goalSurplus = Math.max(0, cycle.totalFaturamento - cycleTarget);
+
+    return (
+      <div
+        key={cycle.referenciaChave}
+        role="button"
+        tabIndex={0}
+        onClick={() => setSelectedCycleDetails(cycle)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            setSelectedCycleDetails(cycle);
+          }
+        }}
+        className={`w-full group text-left p-4 sm:p-5 rounded-3xl border transition-all duration-300 cursor-pointer relative overflow-hidden backdrop-blur-md shadow-lg hover:shadow-xl flex flex-col justify-between ${
+          isHighlighted
+            ? 'bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 border-emerald-400 ring-2 ring-emerald-500/80 shadow-lg shadow-emerald-500/30'
+            : isPaid
+            ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border-emerald-500/50 hover:border-emerald-500/70 ring-2 ring-emerald-500/50 shadow-emerald-500/15'
+            : isGoalHit
+            ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 border-amber-500/40 hover:border-amber-500/60 ring-1 ring-amber-500/30'
+            : isLate
+            ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/30 border-rose-500/40 hover:border-rose-500/60 ring-1 ring-rose-500/20'
+            : cycle.isCurrent || (isFirst && tipo === 'quinzenal')
+            ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/40 hover:border-emerald-500/60 ring-1 ring-emerald-500/20'
+            : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+        }`}
+      >
+        {/* Glow decorativo suave */}
+        {cycle.isCurrent && (
+          <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        )}
+
+        <div>
+          {/* Topo do Card: Badge do Ciclo + Badge de Status de Pagamento */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                  cycle.isCurrent
+                    ? 'bg-emerald-500 text-slate-950 shadow-xs font-black'
+                    : 'bg-slate-800 text-slate-300 border border-slate-700'
+                }`}
+              >
+                {cycle.cycleName}
+              </span>
+              <span className="text-[11px] text-slate-400 font-mono">
+                {cycle.corteLabel}
+              </span>
+            </div>
+
+            {/* Badge de Status de Recebimento */}
+            {isPaid ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold shadow-xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Pago / Na Conta</span>
+              </span>
+            ) : isLate ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[11px] font-bold animate-pulse">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+                <span>Pagamento Atrasado (Era dia {cycle.diaPagamento})</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span>Aguardando Pagamento (Dia {cycle.diaPagamento})</span>
+              </span>
+            )}
+          </div>
+
+          {/* Título do Pagamento e Previsão */}
+          <div className="flex items-center justify-between gap-2 mt-2">
+            <h4 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-emerald-400" />
+              Receber no Dia {cycle.diaPagamento}
+            </h4>
+
+            {/* Seta indicador de detalhe */}
+            <div className="w-7 h-7 rounded-xl bg-slate-800/80 group-hover:bg-emerald-500 group-hover:text-slate-950 text-slate-400 flex items-center justify-center transition shrink-0">
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Valor Total Acumulado */}
+          <div className="mt-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
+              Faturamento Calculado no Período
+            </span>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-0.5 tracking-tight font-mono">
+              <AnimatedCounter value={cycle.totalFaturamento} formatAsCurrency />
+            </div>
+          </div>
+
+          {/* Detalhe de Confirmação quando já está Pago */}
+          {isPaid && rec && (
+            <div className="mt-2.5 p-2.5 rounded-xl bg-slate-950/80 border border-emerald-500/30 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>
+                  Confirmado em:{' '}
+                  <strong className="text-white">
+                    {formatDate(rec.data_confirmacao || '')}
+                  </strong>
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 block">Caiu na conta:</span>
+                <span className="font-mono font-bold text-emerald-400 text-xs">
+                  {formatCurrency(rec.valor_recebido ?? cycle.totalFaturamento)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Métricas do Ciclo: Peças, KM e Dias */}
+          <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            <span className="bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800/80 font-mono text-[11px] flex items-center gap-1">
+              <Package className="w-3.5 h-3.5 text-teal-400" />
+              <strong>{cycle.totalPecas}</strong> peças
+            </span>
+            <span className="bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800/80 font-mono text-[11px] flex items-center gap-1">
+              <Gauge className="w-3.5 h-3.5 text-teal-400" />
+              <strong>{cycle.totalKm.toFixed(0)}</strong> km
+            </span>
+            <span className="bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800/80 font-mono text-[11px] text-slate-400">
+              {cycle.entries.length}{' '}
+              {cycle.entries.length === 1 ? 'dia lançado' : 'dias lançados'}
+            </span>
+          </div>
+
+          {/* BARRA DE PROGRESSO DA META FINANCEIRA */}
+          <div className="mt-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400 flex items-center gap-1 font-medium">
+                {isGoalHit ? (
+                  <span className="text-amber-400 font-bold flex items-center gap-1">
+                    🏆 Meta Batida!
+                  </span>
+                ) : (
+                  <span>Progresso da Meta ({formatCurrency(cycleTarget)})</span>
+                )}
+              </span>
+              <span className={`font-mono font-bold ${isGoalHit ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {cycleProgress.toFixed(0)}%
+              </span>
+            </div>
+
+            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(cycleProgress, 100)}%` }}
+                transition={{ type: 'spring', stiffness: 220, damping: 25 }}
+                className={`h-full rounded-full ${
+                  isGoalHit
+                    ? 'bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400'
+                    : 'bg-gradient-to-r from-teal-500 to-emerald-400'
+                }`}
+              />
+            </div>
+
+            {isGoalHit && (
+              <div className="text-[11px] text-emerald-300 font-semibold flex items-center justify-between pt-0.5">
+                <span>🎉 Superou a meta em +{formatCurrency(goalSurplus)}!</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Botão de Ação Rápida de Confirmação */}
+        <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+          <div className="text-[10px] text-slate-400 group-hover:text-emerald-300 transition flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span>Toque no card para ver dia a dia</span>
+          </div>
+
+          {isPaid ? (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCycleToConfirm(cycle);
+              }}
+              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/80 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              title="Editar dados do recebimento"
+            >
+              <Pencil className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Editar Recebimento</span>
+            </motion.button>
+          ) : (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCycleToConfirm(cycle);
+              }}
+              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
+              title="Confirmar que o pagamento caiu na conta"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Marcar como Recebido</span>
+            </motion.button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="space-y-3">
@@ -212,237 +431,47 @@ export const PaymentCyclesCards: React.FC<PaymentCyclesCardsProps> = ({
           </button>
         </div>
 
-        {/* CARDS DOS CICLOS (Carrossel Horizontal no Mobile com Scroll-Snap e Peek Effect) */}
-        <SwipeableCarousel
-          totalItems={cycles.length}
-          initialIndex={defaultCycleIndex}
-          gridClassName={tipo === 'quinzenal' ? 'md:grid-cols-2 md:gap-3' : 'md:grid-cols-1'}
-        >
-          {cycles.map((cycle, index) => {
-            const isFirst = index === 0;
-            const isPaid = cycle.status === 'pago';
-            const isLate = cycle.status === 'atrasado';
-            const rec = cycle.paymentRecord;
-            const isHighlighted = recentlyPaidKey === cycle.referenciaChave;
+        {/* Seletor Deslizante (Segmented Control) no Mobile para 1ª / 2ª Quinzena */}
+        {tipo === 'quinzenal' && cycles.length > 1 && (
+          <div className="md:hidden grid grid-cols-2 p-1 bg-slate-900 border border-slate-800 rounded-2xl gap-1">
+            {cycles.map((c, idx) => {
+              const isSelected = activeCycleIndex === idx;
+              return (
+                <button
+                  key={c.referenciaChave}
+                  type="button"
+                  onClick={() => setActiveCycleIndex(idx)}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <span>{c.cycleName}</span>
+                  <span className={`text-[10px] ${isSelected ? 'text-slate-950 font-black' : 'text-slate-500'}`}>
+                    (Dia {c.diaPagamento})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-            // Metas do Ciclo
-            const cycleTarget = tipo === 'quinzenal' ? savedGoal / 2 : savedGoal;
-            const cycleProgress = cycleTarget > 0 ? (cycle.totalFaturamento / cycleTarget) * 100 : 0;
-            const isGoalHit = cycleProgress >= 100;
-            const goalSurplus = Math.max(0, cycle.totalFaturamento - cycleTarget);
+        {/* No Mobile: Exibe 1 único Card Hero impecável da quinzena selecionada */}
+        <div className="block md:hidden">
+          {cycles[activeCycleIndex] && renderCycleCard(cycles[activeCycleIndex], activeCycleIndex)}
+        </div>
 
-            return (
-              <div
-                key={cycle.referenciaChave}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedCycleDetails(cycle)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setSelectedCycleDetails(cycle);
-                  }
-                }}
-                className={`min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto group text-left p-4 sm:p-5 rounded-3xl border transition-all duration-300 cursor-pointer relative overflow-hidden backdrop-blur-md shadow-lg hover:shadow-xl flex flex-col justify-between ${
-                  isHighlighted
-                    ? 'bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 border-emerald-400 ring-2 ring-emerald-500/80 shadow-lg shadow-emerald-500/30'
-                    : isPaid
-                    ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border-emerald-500/50 hover:border-emerald-500/70 ring-2 ring-emerald-500/50 shadow-emerald-500/15'
-                    : isGoalHit
-                    ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 border-amber-500/40 hover:border-amber-500/60 ring-1 ring-amber-500/30'
-                    : isLate
-                    ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/30 border-rose-500/40 hover:border-rose-500/60 ring-1 ring-rose-500/20'
-                    : cycle.isCurrent || (isFirst && tipo === 'quinzenal')
-                    ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/40 hover:border-emerald-500/60 ring-1 ring-emerald-500/20'
-                    : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                {/* Glow decorativo suave */}
-                {cycle.isCurrent && (
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-                )}
-
-                <div>
-                  {/* Topo do Card: Badge do Ciclo + Badge de Status de Pagamento */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                          cycle.isCurrent
-                            ? 'bg-emerald-500 text-slate-950 shadow-xs font-black'
-                            : 'bg-slate-800 text-slate-300 border border-slate-700'
-                        }`}
-                      >
-                        {cycle.cycleName}
-                      </span>
-                      <span className="text-[11px] text-slate-400 font-mono">
-                        {cycle.corteLabel}
-                      </span>
-                    </div>
-
-                    {/* Badge de Status de Recebimento */}
-                    {isPaid ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold shadow-xs">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Pago / Na Conta</span>
-                      </span>
-                    ) : isLate ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[11px] font-bold animate-pulse">
-                        <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-                        <span>Pagamento Atrasado (Era dia {cycle.diaPagamento})</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold">
-                        <Clock className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Aguardando Pagamento (Dia {cycle.diaPagamento})</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Título do Pagamento e Previsão */}
-                  <div className="flex items-center justify-between gap-2 mt-2">
-                    <h4 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4 text-emerald-400" />
-                      Receber no Dia {cycle.diaPagamento}
-                    </h4>
-
-                    {/* Seta indicador de detalhe */}
-                    <div className="w-7 h-7 rounded-xl bg-slate-800/80 group-hover:bg-emerald-500 group-hover:text-slate-950 text-slate-400 flex items-center justify-center transition shrink-0">
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
-                  </div>
-
-                  {/* Valor Total Acumulado */}
-                  <div className="mt-3">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
-                      Faturamento Calculado no Período
-                    </span>
-                    <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-0.5 tracking-tight font-mono">
-                      <AnimatedCounter value={cycle.totalFaturamento} formatAsCurrency />
-                    </div>
-                  </div>
-
-                  {/* Detalhe de Confirmação quando já está Pago */}
-                  {isPaid && rec && (
-                    <div className="mt-2.5 p-2.5 rounded-xl bg-slate-950/80 border border-emerald-500/30 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5 text-slate-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>
-                          Confirmado em:{' '}
-                          <strong className="text-white">
-                            {formatDate(rec.data_confirmacao || '')}
-                          </strong>
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 block">Caiu na conta:</span>
-                        <span className="font-mono font-bold text-emerald-400 text-xs">
-                          {formatCurrency(rec.valor_recebido ?? cycle.totalFaturamento)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Métricas do Ciclo: Peças, KM e Dias */}
-                  <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-                    <span className="bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800/80 font-mono text-[11px] flex items-center gap-1">
-                      <Package className="w-3.5 h-3.5 text-teal-400" />
-                      <strong>{cycle.totalPecas}</strong> peças
-                    </span>
-                    <span className="bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800/80 font-mono text-[11px] flex items-center gap-1">
-                      <Gauge className="w-3.5 h-3.5 text-teal-400" />
-                      <strong>{cycle.totalKm.toFixed(0)}</strong> km
-                    </span>
-                    <span className="bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800/80 font-mono text-[11px] text-slate-400">
-                      {cycle.entries.length}{' '}
-                      {cycle.entries.length === 1 ? 'dia lançado' : 'dias lançados'}
-                    </span>
-                  </div>
-
-                  {/* BARRA DE PROGRESSO DA META FINANCEIRA */}
-                  <div className="mt-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-400 flex items-center gap-1 font-medium">
-                        {isGoalHit ? (
-                          <span className="text-amber-400 font-bold flex items-center gap-1">
-                            🏆 Meta Batida!
-                          </span>
-                        ) : (
-                          <span>Progresso da Meta ({formatCurrency(cycleTarget)})</span>
-                        )}
-                      </span>
-                      <span className={`font-mono font-bold ${isGoalHit ? 'text-amber-400' : 'text-emerald-400'}`}>
-                        {cycleProgress.toFixed(0)}%
-                      </span>
-                    </div>
-
-                    <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(cycleProgress, 100)}%` }}
-                        transition={{ type: 'spring', stiffness: 220, damping: 25 }}
-                        className={`h-full rounded-full ${
-                          isGoalHit
-                            ? 'bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400'
-                            : 'bg-gradient-to-r from-teal-500 to-emerald-400'
-                        }`}
-                      />
-                    </div>
-
-                    {isGoalHit && (
-                      <div className="text-[11px] text-emerald-300 font-semibold flex items-center justify-between pt-0.5">
-                        <span>🎉 Superou a meta em +{formatCurrency(goalSurplus)}!</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Botão de Ação Rápida de Confirmação */}
-                <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                  <div className="text-[10px] text-slate-400 group-hover:text-emerald-300 transition flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
-                    <span>Toque no card para ver dia a dia</span>
-                  </div>
-
-                  {isPaid ? (
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCycleToConfirm(cycle);
-                      }}
-                      className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700/80 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-                      title="Editar dados do recebimento"
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Editar Recebimento</span>
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCycleToConfirm(cycle);
-                      }}
-                      className="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20"
-                      title="Confirmar que o pagamento caiu na conta"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
-                      <span>Marcar como Recebido</span>
-                    </motion.button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </SwipeableCarousel>
+        {/* No Desktop: Exibe os cards lado a lado em Grid */}
+        <div className={`hidden md:grid ${tipo === 'quinzenal' ? 'md:grid-cols-2 md:gap-4' : 'grid-cols-1'}`}>
+          {cycles.map((cycle, index) => renderCycleCard(cycle, index))}
+        </div>
       </div>
 
       {/* MODAL DE DETALHAMENTO DO CICLO AO CLICAR NO CARD */}
       {selectedCycleDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xl p-5 sm:p-7 shadow-2xl relative max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-xl p-5 sm:p-7 shadow-2xl relative max-h-[88dvh] flex flex-col overflow-y-auto overscroll-contain">
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 shrink-0">
               <div className="flex items-center gap-3">

@@ -151,14 +151,14 @@ export const EditEarningModal: React.FC<EditEarningModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
           <motion.div
             variants={modalBackdropVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             onClick={onClose}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+            className="fixed inset-0 bg-transparent cursor-pointer"
           />
 
           <motion.div
@@ -169,7 +169,7 @@ export const EditEarningModal: React.FC<EditEarningModalProps> = ({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto z-10"
+            className="w-full sm:max-w-lg max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 bg-slate-900 border border-slate-800 shadow-2xl relative z-10 overscroll-contain"
           >
         {/* Header do Modal */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">

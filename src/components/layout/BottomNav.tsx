@@ -40,9 +40,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       aria-label="Navegação rápida inferior"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800/90 pb-safe shadow-[0_-8px_20px_rgba(0,0,0,0.4)]"
+      className="shrink-0 fixed bottom-0 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-lg border-t border-zinc-800/80 pb-safe md:hidden"
     >
-      <div className="grid grid-cols-5 h-16 max-w-lg mx-auto px-1 items-center">
+      <div className="grid grid-cols-5 h-16 items-center w-full px-1">
         {navShortcuts.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
@@ -53,29 +53,29 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               type="button"
               whileTap={{ scale: 0.92 }}
               onClick={() => onSelectView(item.id)}
-              className={`relative flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-2xl transition-colors cursor-pointer select-none ${
+              className={`relative flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-xl transition-colors cursor-pointer select-none px-0.5 ${
                 isActive
                   ? 'text-emerald-400 font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
               {/* Pílula ativa deslizante (layoutId) */}
               {isActive && (
                 <motion.div
                   layoutId="bottomNavActiveTabIndicator"
-                  className="absolute inset-x-1.5 inset-y-1.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 -z-10"
+                  className="absolute inset-x-1 inset-y-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 -z-10"
                   transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                 />
               )}
 
               <motion.div
-                animate={{ scale: isActive ? 1.08 : 1 }}
+                animate={{ scale: isActive ? 1.06 : 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                className="p-1 rounded-xl"
+                className="p-1 rounded-lg"
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
               </motion.div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] text-center">
+              <span className="text-[11px] leading-tight mt-0.5 tracking-tight truncate w-full text-center block">
                 {item.label}
               </span>
             </motion.button>
@@ -87,12 +87,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           type="button"
           whileTap={{ scale: 0.92 }}
           onClick={onOpenDrawer}
-          className="flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-2xl text-slate-400 hover:text-slate-200 transition-colors cursor-pointer select-none"
+          className="flex flex-col items-center justify-center h-full min-h-[48px] w-full rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer select-none px-0.5"
         >
-          <div className="p-1 rounded-xl bg-slate-800/60 text-slate-300">
+          <div className="p-1 rounded-lg bg-zinc-800/60 text-zinc-300">
             <Menu className="w-5 h-5 stroke-[2]" />
           </div>
-          <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] text-center font-medium">
+          <span className="text-[11px] leading-tight mt-0.5 tracking-tight truncate w-full text-center font-medium block">
             Menu
           </span>
         </motion.button>

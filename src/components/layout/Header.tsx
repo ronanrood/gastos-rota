@@ -22,8 +22,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenDrawer, currentTitle, onOp
       : 'Motorista';
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white shadow-md">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between">
+    <header className="shrink-0 z-30 pt-safe bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800/80 text-white shadow-md">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
         {/* Left: Hamburger & Brand */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button

@@ -247,7 +247,7 @@ const ConfirmPaymentForm: React.FC<InnerFormProps> = ({
   }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[92vh] flex flex-col">
+    <div className="bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[85dvh] overflow-y-auto overscroll-contain flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 shrink-0">
         <div className="flex items-center gap-3">
@@ -471,14 +471,14 @@ export const ConfirmPaymentModal: React.FC<ConfirmPaymentModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && cycle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm">
           <motion.div
             variants={modalBackdropVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             onClick={onClose}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+            className="fixed inset-0 bg-transparent cursor-pointer"
           />
 
           <motion.div
@@ -486,7 +486,7 @@ export const ConfirmPaymentModal: React.FC<ConfirmPaymentModalProps> = ({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="w-full max-w-lg relative z-10 my-auto"
+            className="w-full sm:max-w-lg relative z-10"
           >
             <ConfirmPaymentForm
               key={cycle.referenciaChave}

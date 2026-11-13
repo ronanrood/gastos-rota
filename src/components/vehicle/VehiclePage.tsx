@@ -220,7 +220,7 @@ export const VehiclePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="w-full max-w-3xl mx-auto space-y-6">
       {/* Resumo do Veículo Cadastrado (se já existir) */}
       {vehicle && !loading && (
         <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden backdrop-blur-md">

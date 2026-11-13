@@ -3,7 +3,6 @@ import { useAuth } from '../../contexts/useAuth';
 import { supabase } from '../../lib/supabase';
 import type { Profile, UserRole, UserStatus } from '../../types/database';
 import { createClient } from '@supabase/supabase-js';
-import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   ShieldCheck,
   Users,
@@ -344,7 +343,7 @@ export const AdminPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="w-full space-y-6">
       {/* Header do Painel Admin */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -396,67 +395,64 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* CARDS DE VISÃO GERAL (Carrossel Horizontal no Mobile) */}
-      <SwipeableCarousel
-        totalItems={3}
-        gridClassName="md:grid-cols-3 md:gap-4"
-      >
+      {/* CARDS DE VISÃO GERAL (Bento Grid no Mobile / 3 colunas no Desktop) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4">
         {/* Card 1: Total de Motoristas */}
-        <div className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Total de Cadastros
+        <div className="w-full bg-slate-900 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-lg backdrop-blur-md min-w-0 flex flex-col justify-between">
+          <div className="flex items-center justify-between min-w-0">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
+              Cadastros
             </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
               <Users className="w-4 h-4 stroke-[2.2]" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight font-mono">
+          <div className="text-xl sm:text-3xl font-black text-white mt-2 tracking-tight font-mono tabular-nums truncate">
             {totalMotoristas}
           </div>
-          <span className="text-xs text-slate-400 mt-1 block">
-            Usuários registrados no banco
+          <span className="text-[10px] sm:text-xs text-slate-400 mt-0.5 block truncate">
+            Total de usuários
           </span>
         </div>
 
         {/* Card 2: Motoristas Ativos */}
-        <div className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Motoristas Ativos
+        <div className="w-full bg-slate-900 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-lg backdrop-blur-md min-w-0 flex flex-col justify-between">
+          <div className="flex items-center justify-between min-w-0">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
+              Ativos
             </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
               <UserCheck className="w-4 h-4 stroke-[2.2]" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-3 tracking-tight font-mono">
+          <div className="text-xl sm:text-3xl font-black text-emerald-400 mt-2 tracking-tight font-mono tabular-nums truncate">
             {motoristasAtivos}
           </div>
-          <span className="text-xs text-slate-400 mt-1 block">
+          <span className="text-[10px] sm:text-xs text-slate-400 mt-0.5 block truncate">
             {totalMotoristas > 0
-              ? `${((motoristasAtivos / totalMotoristas) * 100).toFixed(0)}% com acesso liberado`
+              ? `${((motoristasAtivos / totalMotoristas) * 100).toFixed(0)}% liberados`
               : 'Nenhum ativo'}
           </span>
         </div>
 
         {/* Card 3: Faturamento Total da Frota */}
-        <div className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+        <div className="col-span-2 sm:col-span-1 w-full bg-slate-900 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-lg backdrop-blur-md min-w-0 flex flex-col justify-between">
+          <div className="flex items-center justify-between min-w-0">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
               Faturamento Global
             </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
               <TrendingUp className="w-4 h-4 stroke-[2.2]" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-amber-400 mt-3 tracking-tight font-mono">
+          <div className="text-xl sm:text-3xl font-black text-amber-400 mt-2 tracking-tight font-mono tabular-nums truncate">
             {formatCurrency(totalPlatformRevenue)}
           </div>
-          <span className="text-xs text-slate-400 mt-1 block">
+          <span className="text-[10px] sm:text-xs text-slate-400 mt-0.5 block truncate">
             Movimentado em toda a plataforma
           </span>
         </div>
-      </SwipeableCarousel>
+      </div>
 
       {/* TABELA DE MOTORISTAS / USUÁRIOS */}
       <section className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xl backdrop-blur-md">

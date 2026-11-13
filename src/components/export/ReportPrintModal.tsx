@@ -324,7 +324,7 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:inset-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm print:p-0 print:bg-white print:static print:inset-auto">
           {/* Estilos específicos de impressão para forçar documento A4 limpo */}
           <style>{`
             @media print {
@@ -379,7 +379,7 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] relative z-10 print:max-h-none print:border-none print:shadow-none print:rounded-none print:bg-white"
+            className="w-full sm:max-w-4xl bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] relative z-10 overscroll-contain print:max-h-none print:border-none print:shadow-none print:rounded-none print:bg-white"
           >
             {/* TOPO DO MODAL: TÍTULO, SUBTÍTULO E FECHAR (Oculto na impressão) */}
             <div className="p-4 sm:p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-3 print:hidden shrink-0">

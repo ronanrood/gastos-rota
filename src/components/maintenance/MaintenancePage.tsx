@@ -28,13 +28,12 @@ import {
   CreditCard,
   ChevronDown,
   Plus,
+  PlusCircle,
 } from 'lucide-react';
 import { EditMaintenanceModal } from './EditMaintenanceModal';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
 import { MaintenanceFilterSummary } from '../filters/MaintenanceFilterSummary';
 import { BottomSheetModal } from '../common/BottomSheetModal';
-import { FloatingActionButton } from '../common/FloatingActionButton';
-import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   type HistoryFilterState,
   getDefaultFilterState,
@@ -1061,59 +1060,72 @@ export const MaintenancePage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Cards de Métricas Resumo */}
+    <div className="w-full space-y-6">
+      {/* Cards de Métricas Resumo - Bento Grid 2x2 no mobile, 4 cols no desktop */}
       {maintenanceLogs.length > 0 && (
-        <SwipeableCarousel totalItems={4} gridClassName="md:grid-cols-4">
-          <div className="min-w-[70vw] sm:min-w-[220px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="w-full min-w-0 bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 backdrop-blur-sm flex flex-col justify-between">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Total Investido
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-blue-400 mt-1 block">
+            <span className="text-base sm:text-xl font-extrabold text-blue-400 mt-1 block font-mono tabular-nums truncate">
               {formatCurrency(totalGastoManutencao)}
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
+            <span className="text-[10px] text-slate-400 mt-0.5 block truncate">
               {maintenanceLogs.length} serviços
             </span>
           </div>
 
-          <div className="min-w-[70vw] sm:min-w-[220px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+          <div className="w-full min-w-0 bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 backdrop-blur-sm flex flex-col justify-between">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Peças
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-white mt-1 block">
+            <span className="text-base sm:text-xl font-extrabold text-white mt-1 block font-mono tabular-nums truncate">
               {formatCurrency(totalEmPecas)}
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
+            <span className="text-[10px] text-slate-400 mt-0.5 block truncate">
               {totalGastoManutencao > 0 ? `${((totalEmPecas / totalGastoManutencao) * 100).toFixed(0)}% do total` : '-'}
             </span>
           </div>
 
-          <div className="min-w-[70vw] sm:min-w-[220px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+          <div className="w-full min-w-0 bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 backdrop-blur-sm flex flex-col justify-between">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Mão de Obra
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-teal-400 mt-1 block">
+            <span className="text-base sm:text-xl font-extrabold text-teal-400 mt-1 block font-mono tabular-nums truncate">
               {formatCurrency(totalEmMaoDeObra)}
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
+            <span className="text-[10px] text-slate-400 mt-0.5 block truncate">
               {totalGastoManutencao > 0 ? `${((totalEmMaoDeObra / totalGastoManutencao) * 100).toFixed(0)}% do total` : '-'}
             </span>
           </div>
 
-          <div className="min-w-[70vw] sm:min-w-[220px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+          <div className="w-full min-w-0 bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 backdrop-blur-sm flex flex-col justify-between">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Em Garantia
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-emerald-400 mt-1 block">
+            <span className="text-base sm:text-xl font-extrabold text-emerald-400 mt-1 block font-mono tabular-nums truncate">
               {servicosEmGarantia}
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
+            <span className="text-[10px] text-slate-400 mt-0.5 block truncate">
               serviços ativos
             </span>
           </div>
-        </SwipeableCarousel>
+        </div>
       )}
+
+      {/* Botão de Ação Primária Full-width no Mobile (Logo abaixo das Métricas) */}
+      <div className="lg:hidden">
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          type="button"
+          onClick={handleOpenNewForm}
+          className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 active:from-blue-600 active:to-cyan-600 text-slate-950 font-black text-sm rounded-2xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition cursor-pointer select-none"
+        >
+          <PlusCircle className="w-5 h-5 stroke-[2.5]" />
+          <span>+ Novo Serviço / Orçamento</span>
+        </motion.button>
+      </div>
 
       {/* LAYOUT PRINCIPAL: No desktop, exibe o formulário na coluna lateral aberta (lg:grid) e o histórico na direita */}
       <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
@@ -1405,7 +1417,7 @@ export const MaintenancePage: React.FC = () => {
                   layout
                   variants={staggerItemVariants}
                   exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
-                  className={`bg-slate-900 border rounded-2xl overflow-hidden shadow-sm transition-colors ${
+                  className={`w-full overflow-hidden rounded-xl border bg-slate-900 shadow-sm transition-colors ${
                     isOrcamento
                       ? 'border-amber-500/40 hover:border-amber-500/60'
                       : 'border-slate-800/80 hover:border-slate-700/80'
@@ -1423,15 +1435,15 @@ export const MaintenancePage: React.FC = () => {
                       }
                     }}
                     aria-expanded={isExpanded}
-                    className="w-full flex items-center justify-between py-3 px-4 text-left cursor-pointer hover:bg-slate-800/40 active:bg-slate-800/60 transition select-none gap-2 min-h-[48px]"
+                    className="w-full flex items-center justify-between gap-3 min-w-0 p-3.5 text-left cursor-pointer hover:bg-slate-800/40 active:bg-slate-800/60 transition select-none min-h-[48px]"
                   >
                     {/* Esquerda: Data + Nome do Serviço/Oficina (truncate) + Badge/Dot de status */}
-                    <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono tracking-tight shrink-0 border border-slate-700/50">
                         {dayAndMonth}
                       </span>
 
-                      <span className="text-xs font-bold text-white truncate max-w-[120px] xs:max-w-[170px] sm:max-w-[260px]">
+                      <span className="text-xs font-bold text-white truncate min-w-0 flex-1">
                         {item.descricao_servico || item.oficina_nome}
                       </span>
 
@@ -1439,17 +1451,17 @@ export const MaintenancePage: React.FC = () => {
                       {isOrcamento ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
                           <ClipboardList className="w-3 h-3" />
-                          <span>Orçamento</span>
+                          <span className="hidden xs:inline">Orçamento</span>
                         </span>
                       ) : instInfo.isParcelado ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-300 border border-blue-500/30 shrink-0">
                           <CreditCard className="w-3 h-3 text-blue-400" />
-                          <span>Parcela {instInfo.currentInstallmentNumber}/{instInfo.totalParcelas}</span>
+                          <span>{instInfo.currentInstallmentNumber}/{instInfo.totalParcelas}</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">
                           <Wrench className="w-3 h-3" />
-                          <span>Realizado</span>
+                          <span className="hidden xs:inline">Realizado</span>
                         </span>
                       )}
                     </div>
@@ -1457,14 +1469,14 @@ export const MaintenancePage: React.FC = () => {
                     {/* Direita: Valor total + ChevronDown */}
                     <div className="flex items-center gap-2 shrink-0">
                       <span
-                        className={`text-sm sm:text-base font-black font-mono ${
+                        className={`text-sm sm:text-base font-black font-mono tabular-nums whitespace-nowrap ${
                           isOrcamento ? 'text-amber-400' : 'text-blue-400'
                         }`}
                       >
                         {formatCurrency(total)}
                       </span>
                       <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${
                           isExpanded ? 'rotate-180 text-blue-400' : ''
                         }`}
                       />
@@ -1479,12 +1491,12 @@ export const MaintenancePage: React.FC = () => {
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2, ease: 'easeInOut' }}
-                        className="overflow-hidden border-t border-slate-800/60 px-4 pt-3 pb-4 space-y-3"
+                        className="overflow-hidden border-t border-slate-800/80 bg-zinc-900/50 p-3.5 space-y-3"
                       >
                         {/* Grid Completo de Detalhes */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                               Oficina / Local
                             </span>
                             <span className="font-bold text-white text-xs sm:text-sm mt-0.5 block truncate" title={item.oficina_nome}>
@@ -1492,30 +1504,30 @@ export const MaintenancePage: React.FC = () => {
                             </span>
                           </div>
 
-                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                               Peças
                             </span>
-                            <span className="font-mono font-bold text-slate-200 text-xs sm:text-sm mt-0.5 block">
+                            <span className="font-mono font-bold text-slate-200 text-xs sm:text-sm mt-0.5 block truncate">
                               {formatCurrency(item.valor_pecas)}
                             </span>
                           </div>
 
-                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                               Mão de Obra
                             </span>
-                            <span className="font-mono font-bold text-slate-200 text-xs sm:text-sm mt-0.5 block">
+                            <span className="font-mono font-bold text-slate-200 text-xs sm:text-sm mt-0.5 block truncate">
                               {formatCurrency(item.valor_mao_de_obra)}
                             </span>
                           </div>
 
-                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                               Valor Total
                             </span>
                             <span
-                              className={`font-mono font-black text-xs sm:text-sm mt-0.5 block ${
+                              className={`font-mono font-black text-xs sm:text-sm mt-0.5 block truncate ${
                                 isOrcamento ? 'text-amber-400' : 'text-blue-400'
                               }`}
                             >
@@ -1530,7 +1542,7 @@ export const MaintenancePage: React.FC = () => {
                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
                               Descrição do Serviço
                             </span>
-                            {item.descricao_servico}
+                            <p className="break-words">{item.descricao_servico}</p>
                           </div>
                         )}
 
@@ -1538,14 +1550,14 @@ export const MaintenancePage: React.FC = () => {
                         {item.garantia_ate && !isOrcamento && (
                           <div className="flex items-center gap-2 text-xs">
                             {isWarrantyActive ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">
-                                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                                Na Garantia até {formatDate(item.garantia_ate)}
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold truncate">
+                                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                                <span className="truncate">Na Garantia até {formatDate(item.garantia_ate)}</span>
                               </span>
                             ) : hasWarrantyExpired ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 text-slate-400 border border-slate-700 font-semibold">
-                                <ShieldAlert className="w-4 h-4 text-slate-400" />
-                                Garantia Expirada ({formatDate(item.garantia_ate)})
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 text-slate-400 border border-slate-700 font-semibold truncate">
+                                <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="truncate">Garantia Expirada ({formatDate(item.garantia_ate)})</span>
                               </span>
                             ) : null}
                           </div>
@@ -1574,18 +1586,18 @@ export const MaintenancePage: React.FC = () => {
 
                             <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono pt-0.5 flex-wrap gap-1">
                               <span>1ª Parcela: {formatDate(instInfo.firstInstallmentDate)}</span>
-                              <span>Impacto mensal no caixa: {formatCurrency(instInfo.valorParcela)}</span>
+                              <span>Impacto mensal: {formatCurrency(instInfo.valorParcela)}</span>
                             </div>
                           </div>
                         )}
 
                         {/* Referência da Data e Ciclo */}
                         <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/40 px-3 py-2 rounded-xl border border-slate-800/40 flex-wrap gap-2">
-                          <span className="flex items-center gap-1.5 font-medium">
-                            <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                            <span>{fullBadge}</span>
+                          <span className="flex items-center gap-1.5 font-medium truncate">
+                            <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span className="truncate">{fullBadge}</span>
                           </span>
-                          <span className="text-[11px] font-mono text-slate-400">
+                          <span className="text-[11px] font-mono text-slate-400 shrink-0">
                             Ref: {paymentCycleBadge}
                           </span>
                         </div>
@@ -1610,61 +1622,59 @@ export const MaintenancePage: React.FC = () => {
 
                         {/* Barra de Ações Rápidas no Rodapé */}
                         <div
-                          className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/60 flex-wrap"
+                          className="pt-2 border-t border-slate-800/80 w-full space-y-2"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {/* Botão Ver Comprovante / Anexo à esquerda */}
-                          <div>
-                            {item.comprovante_url && (
-                              <a
-                                href={item.comprovante_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                title={isOrcamento ? 'Ver Orçamento Anexado' : 'Ver Nota Fiscal / Comprovante'}
-                                className="h-9 px-3 inline-flex items-center gap-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-semibold transition cursor-pointer"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                                <span>{isOrcamento ? 'Ver Anexo' : 'Ver Comprovante'}</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                          </div>
+                          {/* Botão Ver Comprovante / Anexo se houver */}
+                          {item.comprovante_url && (
+                            <a
+                              href={item.comprovante_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title={isOrcamento ? 'Ver Orçamento Anexado' : 'Ver Nota Fiscal / Comprovante'}
+                              className="h-10 px-3 w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-semibold transition cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>{isOrcamento ? 'Ver Anexo / Orçamento' : 'Ver Nota Fiscal / Comprovante'}</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
 
                           {/* Ações: Editar e Excluir */}
-                          <div className="flex items-center gap-2 ml-auto">
-                            {!isConfirming ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setModalMode('edit');
-                                    setEditingMaintenanceLog(item);
-                                  }}
-                                  className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-blue-400 border border-slate-700/60 active:scale-[0.96] transition cursor-pointer"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                  <span>Editar Registro</span>
-                                </button>
+                          {!isConfirming ? (
+                            <div className="grid grid-cols-2 gap-2 w-full">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setModalMode('edit');
+                                  setEditingMaintenanceLog(item);
+                                }}
+                                className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-blue-400 border border-slate-700/60 active:scale-[0.96] transition cursor-pointer w-full"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Editar Registro</span>
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setConfirmDeleteId(item.id);
-                                  }}
-                                  className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 active:scale-[0.96] transition cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>Excluir</span>
-                                </button>
-                              </>
-                            ) : (
-                              <div className="flex items-center gap-2 bg-rose-950/90 border border-rose-600/50 p-1.5 rounded-xl">
-                                <span className="text-xs font-semibold text-rose-300 px-1">
-                                  Confirmar exclusão?
-                                </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDeleteId(item.id);
+                                }}
+                                className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 active:scale-[0.96] transition cursor-pointer w-full"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Excluir</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 bg-rose-950/90 border border-rose-600/50 p-2 rounded-xl w-full">
+                              <span className="text-xs font-semibold text-rose-300 px-1 text-center sm:text-left">
+                                Confirmar exclusão?
+                              </span>
+                              <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1672,7 +1682,7 @@ export const MaintenancePage: React.FC = () => {
                                     handleDelete(item.id);
                                   }}
                                   disabled={isDeleting}
-                                  className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                                  className="h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
                                 >
                                   {isDeleting ? '...' : 'Sim, Excluir'}
                                 </button>
@@ -1682,13 +1692,13 @@ export const MaintenancePage: React.FC = () => {
                                     e.stopPropagation();
                                     setConfirmDeleteId(null);
                                   }}
-                                  className="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
+                                  className="h-9 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
                                 >
                                   Cancelar
                                 </button>
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -1715,11 +1725,7 @@ export const MaintenancePage: React.FC = () => {
         />
       )}
 
-      {/* Botão de Ação Flutuante (FAB) Mobile */}
-      <FloatingActionButton
-        label="+ Oficina"
-        onClick={handleOpenNewForm}
-      />
+
 
       {/* Gaveta Inferior Deslizante (Bottom Sheet) no Mobile */}
       <BottomSheetModal

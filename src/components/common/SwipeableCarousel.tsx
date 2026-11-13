@@ -24,7 +24,7 @@ export const SwipeableCarousel: React.FC<SwipeableCarouselProps> = ({
     if (!carouselRef.current) return;
     const { scrollLeft, clientWidth } = carouselRef.current;
     if (clientWidth === 0) return;
-    const itemWidth = clientWidth * 0.85;
+    const itemWidth = clientWidth * 0.88;
     const index = Math.round(scrollLeft / (itemWidth + 12));
     const clamped = Math.min(Math.max(0, index), totalItems - 1);
     setActiveIndex(clamped);
@@ -57,7 +57,7 @@ export const SwipeableCarousel: React.FC<SwipeableCarouselProps> = ({
       <div
         ref={carouselRef}
         onScroll={handleScroll}
-        className={`flex overflow-x-auto snap-x snap-mandatory gap-3 pb-3 -mx-4 px-4 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] md:grid ${gridClassName} md:overflow-visible md:p-0 md:m-0 ${className}`}
+        className={`w-full overflow-x-auto flex gap-3 pb-2 snap-x snap-mandatory scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] md:grid ${gridClassName} md:overflow-visible md:p-0 md:m-0 ${className}`}
       >
         {children}
       </div>

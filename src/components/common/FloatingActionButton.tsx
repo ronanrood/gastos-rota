@@ -6,13 +6,17 @@ interface FloatingActionButtonProps {
   label: string;
   onClick: () => void;
   icon?: React.ReactNode;
+  hidden?: boolean;
 }
 
 export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   label,
   onClick,
   icon = <Plus className="w-5 h-5 stroke-[2.5]" />,
+  hidden = false,
 }) => {
+  if (hidden) return null;
+
   return (
     <motion.button
       type="button"
@@ -23,7 +27,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       whileTap={{ scale: 0.92 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       aria-label={label}
-      className="fixed bottom-20 right-4 z-40 md:hidden bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 shadow-lg shadow-emerald-500/30 h-14 px-5 rounded-full flex items-center gap-2 font-bold select-none cursor-pointer border border-emerald-400/40"
+      className="fixed right-4 bottom-20 z-30 md:hidden bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-zinc-950 shadow-lg shadow-emerald-500/30 h-14 px-5 rounded-full flex items-center gap-2 font-bold select-none cursor-pointer border border-emerald-400/40"
     >
       {icon}
       <span className="text-sm font-extrabold tracking-tight">

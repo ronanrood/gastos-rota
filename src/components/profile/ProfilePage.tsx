@@ -318,7 +318,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ profile, user, refreshProfile
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-6">
+    <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Cabeçalho da Página */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-800 pb-4">
         <div>

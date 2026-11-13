@@ -637,7 +637,7 @@ export const ToolsPage: React.FC = () => {
   ]);
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+    <div className="w-full space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -696,7 +696,7 @@ export const ToolsPage: React.FC = () => {
       )}
 
       {/* SELETOR DE ABAS DAS 5 FERRAMENTAS (Pílulas Horizontais Deslizantes no Mobile) */}
-      <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 p-1.5 bg-slate-950/80 border border-slate-800 rounded-2xl scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 sm:mx-0 sm:px-1.5 sm:grid sm:grid-cols-3 lg:grid-cols-5">
+      <div className="w-full flex overflow-x-auto snap-x snap-mandatory gap-2 p-1.5 bg-slate-950/80 border border-slate-800 rounded-2xl scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-3 lg:grid-cols-5">
         <motion.button
           whileTap={{ scale: 0.96 }}
           type="button"

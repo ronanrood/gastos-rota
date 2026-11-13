@@ -33,8 +33,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950 overflow-x-hidden">
-      {/* Header Fixo / Sticky */}
+    <div className="fixed inset-0 flex flex-col bg-zinc-950 text-zinc-100 font-sans selection:bg-emerald-500 selection:text-zinc-950 overflow-hidden">
+      {/* Header Fixo no Topo do Shell Nativo com Suporte a Safe Area */}
       <Header
         onOpenDrawer={() => setDrawerOpen(true)}
         currentTitle={VIEW_TITLES[currentView] || 'Gastos Rota'}
@@ -49,11 +49,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         onSelectView={onSelectView}
       />
 
-      {/* Conteúdo Principal: Com compensação superior para o Header e inferior para a BottomNav */}
-      <main className="flex-1 pt-18 sm:pt-20 pb-24 md:pb-12 px-3 sm:px-6 max-w-6xl w-full mx-auto overflow-x-hidden">
-        {/* Banner discreto de instalação PWA (oculta automaticamente se standalone) */}
-        <InstallPwaBanner />
-        {children}
+      {/* Conteúdo Principal Rolável (Miolo do Shell Nativo) */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden w-full overscroll-none">
+        <div className="w-full max-w-7xl mx-auto px-4 pt-4 pb-28 md:pb-8 md:px-8">
+          {/* Banner discreto de instalação PWA (oculta automaticamente se standalone) */}
+          <InstallPwaBanner />
+          {children}
+        </div>
       </main>
 
       {/* Barra de Navegação Rápida Inferior (apenas celular md:hidden) */}

@@ -27,8 +27,6 @@ import { EditFuelModal } from './EditFuelModal';
 import { HistoryFilterBar } from '../filters/HistoryFilterBar';
 import { FuelFilterSummary } from '../filters/FuelFilterSummary';
 import { BottomSheetModal } from '../common/BottomSheetModal';
-import { FloatingActionButton } from '../common/FloatingActionButton';
-import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   type HistoryFilterState,
   getDefaultFilterState,
@@ -660,47 +658,60 @@ export const FuelPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Cards de Métricas Resumo */}
+    <div className="w-full space-y-6">
+      {/* Cards de Métricas Resumo (Grade Compacta 3 Colunas no Mobile e Desktop) */}
       {fuelLogs.length > 0 && (
-        <SwipeableCarousel totalItems={3} gridClassName="md:grid-cols-3">
-          <div className="min-w-[85vw] sm:min-w-[280px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-              Total em Combustível
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+              Total Combustível
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-amber-400 mt-1 block">
+            <span className="text-base sm:text-xl font-extrabold text-amber-400 mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
               {formatCurrency(totalGastoPeriodo)}
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
+            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
               {filteredLogs.length} abastecimentos
             </span>
           </div>
 
-          <div className="min-w-[85vw] sm:min-w-[280px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
               Volume Total
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-white mt-1 block font-mono">
+            <span className="text-base sm:text-xl font-extrabold text-white mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
               {totalLitrosPeriodo.toFixed(1)} L/m³
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
-              {filteredLogs.length > 0 ? `Média ${(totalLitrosPeriodo / filteredLogs.length).toFixed(1)} por vez` : '-'}
+            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
+              {filteredLogs.length > 0 ? `~${(totalLitrosPeriodo / filteredLogs.length).toFixed(1)}/vez` : '-'}
             </span>
           </div>
 
-          <div className="min-w-[85vw] sm:min-w-[280px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 sm:p-4 backdrop-blur-sm">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-              Preço Médio Pago
+          <div className="w-full bg-slate-900/80 border border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 backdrop-blur-sm min-w-0">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider block truncate">
+              Preço Médio
             </span>
-            <span className="text-lg sm:text-xl font-extrabold text-teal-400 mt-1 block font-mono">
+            <span className="text-base sm:text-xl font-extrabold text-teal-400 mt-0.5 sm:mt-1 block font-mono tabular-nums truncate">
               {precoMedioLitroPeriodo > 0 ? formatCurrency(precoMedioLitroPeriodo) : 'R$ 0,00'}
             </span>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
+            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 block truncate">
               por litro/m³
             </span>
           </div>
-        </SwipeableCarousel>
+        </div>
       )}
+
+      {/* BOTÃO DE DESTAQUE INTEGRADO: LANÇAR ABASTECIMENTO (Ação Principal no Mobile) */}
+      <div className="lg:hidden">
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          type="button"
+          onClick={handleOpenNewForm}
+          className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:from-amber-600 active:to-orange-600 text-slate-950 font-black text-sm rounded-2xl shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition cursor-pointer"
+        >
+          <PlusCircle className="w-5 h-5 stroke-[2.5]" />
+          <span>+ Lançar Abastecimento</span>
+        </motion.button>
+      </div>
 
       {/* LAYOUT PRINCIPAL: No desktop, exibe o formulário na coluna lateral aberta (lg:grid) e o histórico na direita */}
       <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start">
@@ -898,7 +909,7 @@ export const FuelPage: React.FC = () => {
                   key={item.id}
                   layout
                   variants={staggerItemVariants}
-                  className="bg-slate-900 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl overflow-hidden shadow-sm transition-colors"
+                  className="w-full overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900/70 shadow-sm transition-colors mb-2"
                 >
                   {/* Linha Compacta (1 Linha - Estado Fechado por Padrão) */}
                   <div
@@ -912,10 +923,10 @@ export const FuelPage: React.FC = () => {
                       }
                     }}
                     aria-expanded={isExpanded}
-                    className="w-full flex items-center justify-between py-3 px-4 text-left cursor-pointer hover:bg-slate-800/40 active:bg-slate-800/60 transition select-none gap-2 min-h-[48px]"
+                    className="w-full flex items-center justify-between gap-3 min-w-0 p-3.5 text-left cursor-pointer hover:bg-slate-800/40 active:bg-slate-800/60 transition select-none min-h-[48px]"
                   >
                     {/* Esquerda: Data (10 Nov) + Badge do combustível + Litragem/Volume */}
-                    <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono tracking-tight shrink-0 border border-slate-700/50">
                         {dayAndMonth}
                       </span>
@@ -930,7 +941,7 @@ export const FuelPage: React.FC = () => {
                       >
                         {item.tipo_combustivel}
                       </span>
-                      <span className="text-xs font-bold text-white font-mono shrink-0">
+                      <span className="text-xs font-bold text-white font-mono truncate">
                         {litros.toFixed(2)}{' '}
                         <span className="text-[11px] font-normal text-slate-400">
                           {getUnidade(item.tipo_combustivel)}
@@ -940,11 +951,11 @@ export const FuelPage: React.FC = () => {
 
                     {/* Direita: Valor abastecido + ChevronDown */}
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm sm:text-base font-black text-amber-400 font-mono">
+                      <span className="text-sm sm:text-base font-black text-amber-400 font-mono tabular-nums whitespace-nowrap">
                         {formatCurrency(item.valor_total_abastecido)}
                       </span>
                       <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${
                           isExpanded ? 'rotate-180 text-amber-400' : ''
                         }`}
                       />
@@ -959,42 +970,42 @@ export const FuelPage: React.FC = () => {
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2, ease: 'easeInOut' }}
-                        className="overflow-hidden border-t border-slate-800/60 px-4 pt-3 pb-4 space-y-3"
+                        className="overflow-hidden border-t border-slate-800/80 bg-zinc-900/50 p-3.5 space-y-3"
                       >
                         {/* Grid Completo de Detalhes */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                               Preço / {getUnidade(item.tipo_combustivel)}
                             </span>
-                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block truncate">
                               {formatCurrency(item.preco_por_litro_ou_m3)}
                             </span>
                           </div>
 
-                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                               Volume Abastecido
                             </span>
-                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block truncate">
                               {litros.toFixed(2)} {getUnidade(item.tipo_combustivel)}
                             </span>
                           </div>
 
-                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                               Odômetro KM
                             </span>
-                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block">
+                            <span className="font-mono font-bold text-white text-xs sm:text-sm mt-0.5 block truncate">
                               {item.km_odometro.toLocaleString('pt-BR')} km
                             </span>
                           </div>
 
-                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                          <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 min-w-0">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider truncate">
                               Autonomia Estimada
                             </span>
-                            <span className="font-mono font-bold text-amber-400 text-xs sm:text-sm mt-0.5 block">
+                            <span className="font-mono font-bold text-amber-400 text-xs sm:text-sm mt-0.5 block truncate">
                               {estKm ? `~${estKm} km` : '---'}
                             </span>
                           </div>
@@ -1003,42 +1014,42 @@ export const FuelPage: React.FC = () => {
                         {/* Custo Estimado por KM se houver cálculo */}
                         {estKm && custoKm && (
                           <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/40 px-3 py-2 rounded-xl border border-slate-800/40 flex-wrap gap-2">
-                            <span className="flex items-center gap-1.5 font-medium">
-                              <Zap className="w-3.5 h-3.5 text-amber-400" />
-                              <span>Custo Estimado por KM:</span>
-                              <strong className="text-white font-mono">R$ {custoKm}/km</strong>
+                            <span className="flex items-center gap-1.5 font-medium truncate">
+                              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span className="truncate">Custo Estimado por KM:</span>
+                              <strong className="text-white font-mono tabular-nums shrink-0">R$ {custoKm}/km</strong>
                             </span>
-                            <span className="text-[11px] font-mono text-slate-400">
-                              (Média do carro: {media} km/{getUnidade(item.tipo_combustivel)})
+                            <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                              (Média: {media} km/{getUnidade(item.tipo_combustivel)})
                             </span>
                           </div>
                         )}
 
                         {/* Referência da Quinzena / Ciclo */}
                         <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/40 px-3 py-2 rounded-xl border border-slate-800/40 flex-wrap gap-2">
-                          <span className="flex items-center gap-1.5 font-medium">
-                            <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                            <span>{fullBadge}</span>
+                          <span className="flex items-center gap-1.5 font-medium truncate">
+                            <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span className="truncate">{fullBadge}</span>
                           </span>
-                          <span className="text-[11px] font-mono text-slate-400">
+                          <span className="text-[11px] font-mono text-slate-400 shrink-0">
                             Ref: {paymentCycleBadge}
                           </span>
                         </div>
 
                         {/* Barra de Ações Rápidas no Rodapé */}
                         <div
-                          className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800/60"
+                          className="pt-2 border-t border-slate-800/80 w-full"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {!isConfirming ? (
-                            <>
+                            <div className="grid grid-cols-2 gap-2 w-full">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setEditingFuelLog(item);
                                 }}
-                                className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-amber-400 border border-slate-700/60 active:scale-[0.96] transition cursor-pointer"
+                                className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-amber-400 border border-slate-700/60 active:scale-[0.96] transition cursor-pointer w-full"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                                 <span>Editar Abastecimento</span>
@@ -1050,38 +1061,40 @@ export const FuelPage: React.FC = () => {
                                   e.stopPropagation();
                                   setConfirmDeleteId(item.id);
                                 }}
-                                className="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 active:scale-[0.96] transition cursor-pointer"
+                                className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 active:scale-[0.96] transition cursor-pointer w-full"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                                 <span>Excluir</span>
                               </button>
-                            </>
+                            </div>
                           ) : (
-                            <div className="flex items-center gap-2 bg-rose-950/90 border border-rose-600/50 p-1.5 rounded-xl">
-                              <span className="text-xs font-semibold text-rose-300 px-1">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 bg-rose-950/90 border border-rose-600/50 p-2 rounded-xl w-full">
+                              <span className="text-xs font-semibold text-rose-300 px-1 text-center sm:text-left">
                                 Confirmar exclusão?
                               </span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(item.id);
-                                }}
-                                disabled={isDeleting}
-                                className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
-                              >
-                                {isDeleting ? '...' : 'Sim, Excluir'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setConfirmDeleteId(null);
-                                }}
-                                className="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
-                              >
-                                Cancelar
-                              </button>
+                              <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(item.id);
+                                  }}
+                                  disabled={isDeleting}
+                                  className="h-9 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition active:scale-[0.96] cursor-pointer"
+                                >
+                                  {isDeleting ? '...' : 'Sim, Excluir'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmDeleteId(null);
+                                  }}
+                                  className="h-9 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition active:scale-[0.96] cursor-pointer"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1108,12 +1121,6 @@ export const FuelPage: React.FC = () => {
           onSuccess={handleEditSuccess}
         />
       )}
-
-      {/* Botão de Ação Flutuante (FAB) Mobile */}
-      <FloatingActionButton
-        label="+ Abastecer"
-        onClick={handleOpenNewForm}
-      />
 
       {/* Gaveta Inferior Deslizante (Bottom Sheet) no Mobile */}
       <BottomSheetModal

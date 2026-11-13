@@ -5,7 +5,6 @@ import { supabase } from '../../lib/supabase';
 import type { DailyEarning, FuelLog, MaintenanceLog, Vehicle, PaymentCycleRecord } from '../../types/database';
 import { AnimatedCounter } from '../common/AnimatedCounter';
 import { staggerItemVariants } from '../common/MotionVariants';
-import { SwipeableCarousel } from '../common/SwipeableCarousel';
 import {
   ResponsiveContainer,
   BarChart,
@@ -418,7 +417,7 @@ export const DashboardPage: React.FC = () => {
   }, [despesasCombustivel, despesasOficina]);
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="w-full space-y-6">
       {/* Top Header: Título e Atualização */}
       <div className="flex items-center justify-between gap-4">
         <div>
@@ -498,29 +497,28 @@ export const DashboardPage: React.FC = () => {
         />
       </div>
 
-      {/* 4 CARDS PRINCIPAIS COM ENTRADA EM CASCATA E CARROSSEL MOBILE */}
-      <SwipeableCarousel
-        totalItems={4}
-        gridClassName="md:grid-cols-2 lg:grid-cols-4 md:gap-4"
-      >
+      {/* BENTO GRID 2x2: 4 CARDS PRINCIPAIS COMPACTOS NO MOBILE E 4 COLUNAS NO DESKTOP */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {/* Card A: Faturamento Bruto */}
         <motion.div
           variants={staggerItemVariants}
           whileHover={{ y: -2 }}
-          className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+          className="w-full bg-slate-900 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-lg relative overflow-hidden backdrop-blur-md min-w-0 flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Faturamento Bruto
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 stroke-[2.2]" />
+          <div>
+            <div className="flex items-center justify-between min-w-0 gap-1">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
+                Faturamento
+              </span>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.2]" />
+              </div>
+            </div>
+            <div className="text-lg sm:text-2xl font-black text-white mt-1.5 sm:mt-3 tracking-tight font-mono tabular-nums truncate">
+              <AnimatedCounter value={faturamentoBruto} formatAsCurrency />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight font-mono">
-            <AnimatedCounter value={faturamentoBruto} formatAsCurrency />
-          </div>
-          <div className="mt-2 text-xs text-slate-400 flex items-center gap-1">
+          <div className="mt-2 text-[10px] sm:text-xs text-slate-400 flex items-center gap-1 min-w-0 truncate">
             <span className="text-emerald-400 font-semibold">{earnings.length}</span> dias de produção
           </div>
         </motion.div>
@@ -529,20 +527,22 @@ export const DashboardPage: React.FC = () => {
         <motion.div
           variants={staggerItemVariants}
           whileHover={{ y: -2 }}
-          className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+          className="w-full bg-slate-900 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-lg relative overflow-hidden backdrop-blur-md min-w-0 flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Despesas Totais
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
-              <TrendingDown className="w-4 h-4 stroke-[2.2]" />
+          <div>
+            <div className="flex items-center justify-between min-w-0 gap-1">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
+                Despesas Totais
+              </span>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
+                <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.2]" />
+              </div>
+            </div>
+            <div className="text-lg sm:text-2xl font-black text-white mt-1.5 sm:mt-3 tracking-tight font-mono tabular-nums truncate">
+              <AnimatedCounter value={despesasTotais} formatAsCurrency />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight font-mono">
-            <AnimatedCounter value={despesasTotais} formatAsCurrency />
-          </div>
-          <div className="mt-2 text-[11px] text-slate-400 flex flex-wrap items-center gap-x-2">
+          <div className="mt-2 text-[11px] text-slate-400 flex flex-wrap items-center gap-x-2 min-w-0">
             <span className="text-amber-400 font-medium">⛽ {formatCurrency(despesasCombustivel)}</span>
             <span className="text-slate-600">•</span>
             <span className="text-blue-400 font-medium" title="Despesa de Oficina no Mês (Parcelas + À vista)">
@@ -550,15 +550,15 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
           {maintenanceExpensesSummary.parcelasTotal > 0 && (
-            <div className="mt-1 text-[10px] text-blue-300/80">
+            <div className="mt-1 text-[10px] text-blue-300/80 truncate">
               (inclui {formatCurrency(maintenanceExpensesSummary.parcelasTotal)} em parcelas)
             </div>
           )}
           {maintenanceExpensesSummary.futureCommittedTotal > 0 && (
-            <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400 flex items-center gap-1.5">
+            <div className="mt-2 pt-2 border-t border-slate-800/60 text-[10px] text-slate-400 flex items-center gap-1.5 min-w-0 truncate">
               <CreditCard className="w-3 h-3 text-cyan-400 shrink-0" />
-              <span>
-                Comprometimento futuro em parcelas:{' '}
+              <span className="truncate">
+                Comprometimento futuro:{' '}
                 <strong className="text-cyan-300 font-mono">
                   {formatCurrency(maintenanceExpensesSummary.futureCommittedTotal)}
                 </strong>
@@ -571,45 +571,47 @@ export const DashboardPage: React.FC = () => {
         <motion.div
           variants={staggerItemVariants}
           whileHover={{ y: -2 }}
-          className={`min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto border rounded-3xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md ${
+          className={`w-full border rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl relative overflow-hidden backdrop-blur-md min-w-0 flex flex-col justify-between ${
             lucroLiquidoReal >= 0
               ? 'bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border-emerald-500/40 ring-1 ring-emerald-500/20'
               : 'bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/40 border-rose-500/40 ring-1 ring-rose-500/20'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Lucro Líquido Real
-            </span>
+          <div>
+            <div className="flex items-center justify-between min-w-0 gap-1">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 truncate">
+                Lucro Líquido
+              </span>
+              <div
+                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 ${
+                  lucroLiquidoReal >= 0
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : 'bg-rose-500/20 text-rose-300'
+                }`}
+              >
+                <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+              </div>
+            </div>
             <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                lucroLiquidoReal >= 0
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : 'bg-rose-500/20 text-rose-300'
+              className={`text-lg sm:text-2xl font-black mt-1.5 sm:mt-3 tracking-tight font-mono tabular-nums truncate ${
+                lucroLiquidoReal >= 0 ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
-              <DollarSign className="w-4 h-4 stroke-[2.5]" />
+              <AnimatedCounter value={lucroLiquidoReal} formatAsCurrency />
             </div>
           </div>
-          <div
-            className={`text-2xl sm:text-3xl font-black mt-3 tracking-tight font-mono ${
-              lucroLiquidoReal >= 0 ? 'text-emerald-400' : 'text-rose-400'
-            }`}
-          >
-            <AnimatedCounter value={lucroLiquidoReal} formatAsCurrency />
-          </div>
-          <div className="mt-2 text-xs flex items-center gap-1.5">
+          <div className="mt-2 text-[10px] sm:text-xs flex items-center gap-1 min-w-0">
             <span
-              className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+              className={`px-1.5 py-0.5 rounded font-bold text-[9px] sm:text-[10px] shrink-0 ${
                 lucroLiquidoReal >= 0
                   ? 'bg-emerald-500/20 text-emerald-300'
                   : 'bg-rose-500/20 text-rose-300'
               }`}
             >
-              Margem: <AnimatedCounter value={margemLucro} decimals={1} suffix="%" />
+              <AnimatedCounter value={margemLucro} decimals={1} suffix="%" />
             </span>
-            <span className="text-[11px] text-slate-400">
-              {lucroLiquidoReal >= 0 ? 'Lucro positivo' : 'Déficit no período'}
+            <span className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+              {lucroLiquidoReal >= 0 ? 'Positivo' : 'Déficit'}
             </span>
           </div>
         </motion.div>
@@ -618,30 +620,32 @@ export const DashboardPage: React.FC = () => {
         <motion.div
           variants={staggerItemVariants}
           whileHover={{ y: -2 }}
-          className="min-w-[85vw] sm:min-w-[320px] snap-center shrink-0 md:min-w-0 md:w-auto bg-slate-900 border border-slate-800/90 rounded-3xl p-5 shadow-lg relative overflow-hidden backdrop-blur-md"
+          className="w-full bg-slate-900 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-lg relative overflow-hidden backdrop-blur-md min-w-0 flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Indicadores por KM
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center">
-              <Gauge className="w-4 h-4 stroke-[2.2]" />
+          <div>
+            <div className="flex items-center justify-between min-w-0 gap-1">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
+                KM Rodados
+              </span>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center shrink-0">
+                <Gauge className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.2]" />
+              </div>
+            </div>
+            <div className="text-lg sm:text-2xl font-black text-white mt-1.5 sm:mt-3 tracking-tight font-mono tabular-nums truncate">
+              <AnimatedCounter value={totalKmRodados} decimals={0} /> <span className="text-xs font-normal text-slate-400">km</span>
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight font-mono">
-            <AnimatedCounter value={totalKmRodados} decimals={0} /> <span className="text-sm font-normal text-slate-400">km</span>
-          </div>
-          <div className="mt-2 text-[11px] text-slate-300 flex flex-wrap gap-x-2">
-            <span>
+          <div className="mt-2 text-[10px] sm:text-[11px] text-slate-300 flex flex-wrap gap-x-1.5 min-w-0 truncate">
+            <span className="truncate">
               Bruto: <strong className="text-emerald-400 font-mono"><AnimatedCounter value={ganhoBrutoPorKm} formatAsCurrency />/km</strong>
             </span>
             <span className="text-slate-600">•</span>
-            <span>
-              Líquido: <strong className={`${lucroLiquidoPorKm >= 0 ? 'text-teal-400' : 'text-rose-400'} font-mono`}><AnimatedCounter value={lucroLiquidoPorKm} formatAsCurrency />/km</strong>
+            <span className="truncate">
+              Líq: <strong className={`${lucroLiquidoPorKm >= 0 ? 'text-teal-400' : 'text-rose-400'} font-mono`}><AnimatedCounter value={lucroLiquidoPorKm} formatAsCurrency />/km</strong>
             </span>
           </div>
         </motion.div>
-      </SwipeableCarousel>
+      </div>
 
       {/* CARD DE PROGRESSO DA META FINANCEIRA */}
       <motion.div
